@@ -390,7 +390,8 @@ def get_active_houses(category: str | None = None, neighborhood: str | None = No
             base += " AND category = ?"
             params.append(category)
         if neighborhood and neighborhood != "Everywhere":
-            base += " AND neighborhood = ?"
+            base += " AND (neighborhood = ? OR area = ?)"
+            params.append(neighborhood)
             params.append(neighborhood)
         base += " ORDER BY rowid DESC"
         return conn.execute(base, tuple(params)).fetchall()
@@ -1837,14 +1838,6 @@ def cb_renter_biz_filter_done(call: types.CallbackQuery) -> None:
             reply_markup=renter_neighborhood_markup(),
         )
         return
-
-    # If step is "biz_type" (landlord), it's handled by cb_biz_done for landlord earlier.
-
-
-    total = len(houses)
-    user_state[user_id] = {"browse_index": 0, "browse_list": [h["id"] for h in houses]}
-    send_house_card(user_id, houses[0], index=1, total=total)
-
 
 
 # ── Toggle for renter business filter ──
