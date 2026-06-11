@@ -1402,6 +1402,11 @@ async function submitOtp() {
   btnText.textContent = 'Verifying…';
 
   try {
+          // TEST BYPASS — remove before launch
+      if (otpValue === '123456') {
+        showScreen('role', null);
+        return;
+      }
     const res = await fetch(API_BASE + '/api/auth/verify-otp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
