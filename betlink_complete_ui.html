@@ -1,0 +1,2608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BetLink</title>
+
+<!-- PWA — makes the app installable on phone -->
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#0F5132" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="BetLink" />
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.11.0/dist/tabler-icons.min.css" />
+
+<!-- ============================================================
+     BETLINK — COMPLETE MOBILE UI ARCHITECTURE
+     Design tokens & business rules enforced:
+       • Primary:    Deep Emerald Green  #0F5132
+       • Accent:     Warm Gold/Amber     #FFC107
+       • Background: Clean Slate         #F8F9FA
+       • Text:       Dark Charcoal       #212529
+       • Categories: Residential | Commercial
+       • Phone:      +251 (10-digit ET validation)
+       • Rent:       Birr (ETB)
+       • Dimensions: text e.g. "4x3", "6x4"
+       • SuitableFor: Cafe, Boutique, Electronics, Pool Zone, Salon, Other
+       • Landlord posting fee: 200 ETB
+       • Renter unlock fee:    100 ETB
+       • Listing expiry:       30 days
+       • Payment A: Chapa API (form-urlencoded, 2-step backend verify)
+       • Payment B: Manual bank transfer → admin screenshot review
+       • Admin:     Approve / Reject inline controls
+     ============================================================ -->
+
+<style>
+/* ── Design tokens ────────────────────────────────────────── */
+:root {
+  --em:          #0F5132;
+  --em-light:    #e8f5ee;
+  --em-mid:      #1a7a4a;
+  --gold:        #FFC107;
+  --gold-dark:   #b38a00;
+  --gold-light:  #fff8e1;
+  --bg:          #F8F9FA;
+  --dark:        #212529;
+  --muted:       #6c757d;
+  --border:      rgba(0,0,0,0.1);
+  --red:         #e24b4a;
+  --red-light:   #fef2f2;
+}
+
+/* ── Utility ──────────────────────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border-width:0}
+
+/* ── Outer demo shell ─────────────────────────────────────── */
+body{background:#f0f0f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:16px 0 32px}
+.demo-wrap{max-width:900px;margin:0 auto;padding:0 12px}
+.demo-title{text-align:center;font-size:13px;font-weight:600;color:#0F5132;letter-spacing:.5px;text-transform:uppercase;margin-bottom:12px}
+
+/* ── On real mobile — fill the whole screen ── */
+@media (max-width: 480px) {
+  body { background: #F8F9FA; padding: 0; }
+  .demo-wrap { padding: 0; }
+  .phone-wrap { background: none; border-radius: 0; padding: 0; }
+  .phone { width: 100%; border-radius: 0; border: none; box-shadow: none; }
+  .screen-body { max-height: calc(100vh - 180px); }
+}
+
+/* ── Top screen-nav pills ─────────────────────────────────── */
+.screen-nav{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 1rem;padding:0 2px}
+.nav-btn{padding:6px 12px;font-size:12px;border-radius:20px;border:1px solid rgba(0,0,0,0.15);background:#fff;color:#6c757d;cursor:pointer;transition:all .15s;white-space:nowrap}
+.nav-btn.active{background:#0F5132;color:#fff;border-color:#0F5132}
+
+/* ── Phone shell ──────────────────────────────────────────── */
+.phone-wrap{background:#e0e0e0;border-radius:16px;padding:16px;display:flex;justify-content:center}
+.phone{width:320px;background:#F8F9FA;border-radius:32px;border:2px solid rgba(0,0,0,0.15);overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;box-shadow:0 8px 32px rgba(0,0,0,.18)}
+
+/* ── Status bar ───────────────────────────────────────────── */
+.status-bar{background:#0F5132;padding:8px 16px 6px;display:flex;justify-content:space-between;align-items:center}
+.status-bar span{color:#fff;font-size:11px;font-weight:500}
+
+/* ── Screen visibility ────────────────────────────────────── */
+.screen{display:none}
+.screen.active{display:block}
+
+/* ── Shared header ────────────────────────────────────────── */
+.em-header{background:#0F5132;padding:16px;color:#fff}
+.em-header-row{display:flex;align-items:center;justify-content:space-between}
+.em-logo{font-size:20px;font-weight:500;color:#fff;letter-spacing:-.5px}
+.em-logo span{color:#FFC107}
+.bell-btn{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;flex-shrink:0;position:relative;}
+.greeting{font-size:13px;color:rgba(255,255,255,.8);margin:8px 0 0}
+.greeting strong{color:#fff;font-weight:500}
+
+/* ── Category pills ───────────────────────────────────────── */
+.pill-scroll{display:flex;gap:6px;padding:10px 12px;overflow-x:auto;background:#fff;border-bottom:.5px solid var(--border)}
+.pill-scroll::-webkit-scrollbar{display:none}
+.pill{padding:5px 12px;border-radius:20px;font-size:12px;white-space:nowrap;cursor:pointer;border:.5px solid var(--border);background:#fff;color:#212529;font-weight:400}
+.pill.active{background:#0F5132;color:#fff;border-color:#0F5132}
+
+/* ── Neighborhood sub-filter ──────────────────────────────── */
+.nbr-scroll{display:flex;gap:5px;padding:8px 12px;overflow-x:auto;background:#f8f9fa;border-bottom:.5px solid var(--border)}
+.nbr-scroll::-webkit-scrollbar{display:none}
+.nbr{padding:4px 10px;border-radius:12px;font-size:11px;white-space:nowrap;cursor:pointer;border:.5px solid var(--border);background:#fff;color:#6c757d}
+.nbr.active{background:#e8f5ee;color:#0F5132;border-color:#0F5132;font-weight:500}
+
+/* ── Feed & property cards ────────────────────────────────── */
+.feed{padding:10px 12px;display:flex;flex-direction:column;gap:10px;background:#f8f9fa}
+.prop-card{background:#fff;border-radius:12px;border:.5px solid var(--border);overflow:hidden}
+.prop-img{height:130px;background:#e8f5ee;display:flex;align-items:center;justify-content:center;position:relative}
+.prop-img-placeholder{color:#0F5132;font-size:32px}
+.price-tag{position:absolute;bottom:8px;left:8px;background:#0F5132;color:#fff;padding:3px 8px;border-radius:8px;font-size:12px;font-weight:500}
+.save-btn{position:absolute;top:8px;right:8px;width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;border:none;cursor:pointer}
+.prop-body{padding:10px 12px}
+.prop-title{font-size:14px;font-weight:500;color:#212529;margin:0 0 4px}
+.prop-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.meta-item{font-size:11px;color:#6c757d;display:flex;align-items:center;gap:3px}
+.suitable-tag{display:inline-block;font-size:10px;padding:2px 7px;border-radius:10px;background:#e8f5ee;color:#0a3d24;margin-top:5px;margin-right:3px}
+.unlock-row{display:flex;align-items:center;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:.5px solid var(--border)}
+.unlock-btn{padding:5px 12px;background:#FFC107;color:#7a5800;border:none;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer}
+.expiry-note{font-size:10px;color:#6c757d}
+
+/* ── Bottom nav ───────────────────────────────────────────── */
+.bottom-nav{background:#fff;border-top:.5px solid var(--border);display:flex;justify-content:space-around;padding:8px 0 10px}
+.nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:0 6px}
+.nav-item span{font-size:10px;color:#6c757d}
+.nav-item.active span{color:#0F5132}
+.nav-item i{font-size:20px;color:#6c757d}
+.nav-item.active i{color:#0F5132}
+
+/* ── Scrollable body ──────────────────────────────────────── */
+.screen-body{max-height:480px;overflow-y:auto;background:#F8F9FA}
+.screen-body::-webkit-scrollbar{display:none}
+
+/* ── Forms ────────────────────────────────────────────────── */
+.form-section{padding:16px}
+.form-label{font-size:12px;color:#6c757d;margin:0 0 5px;font-weight:500;display:block}
+.form-input{width:100%;padding:9px 12px;border-radius:8px;border:.5px solid var(--border);background:#fff;font-size:13px;color:#212529}
+.form-input:focus{outline:none;border-color:#0F5132}
+.form-select{width:100%;padding:9px 12px;border-radius:8px;border:.5px solid var(--border);background:#fff;font-size:13px;color:#212529;appearance:none}
+.phone-row{display:flex;gap:6px}
+.country-code{padding:9px 10px;border-radius:8px;border:.5px solid var(--border);background:#fff;font-size:12px;color:#212529;white-space:nowrap;font-weight:500;min-width:70px;text-align:center}
+.otp-row{display:flex;gap:8px;justify-content:center;margin:12px 0}
+.otp-box{width:52px;height:52px;border-radius:10px;border:.5px solid var(--border);background:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:500;color:#212529}
+.otp-box.filled{border-color:#0F5132;background:#e8f5ee;color:#0F5132}
+.otp-box.active-box{border-color:#FFC107;border-width:1.5px}
+.role-toggle{display:flex;gap:0;border-radius:10px;overflow:hidden;border:.5px solid var(--border);margin:6px 0}
+.role-opt{flex:1;padding:10px;text-align:center;font-size:12px;cursor:pointer;background:#fff;color:#6c757d;border:none}
+.role-opt.active{background:#0F5132;color:#fff;font-weight:500}
+.cta-btn{width:100%;padding:13px;background:#0F5132;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;margin-top:4px;display:flex;align-items:center;justify-content:center;gap:6px}
+.cta-btn-gold{background:#FFC107;color:#7a5800}
+.cta-btn:disabled{opacity:.5;cursor:not-allowed}
+.divider-or{display:flex;align-items:center;gap:8px;margin:10px 0}
+.divider-or::before,.divider-or::after{content:'';flex:1;height:.5px;background:var(--border)}
+.divider-or span{font-size:11px;color:#6c757d}
+.field-hint{font-size:11px;color:#6c757d;margin:4px 0 0}
+.field-error{font-size:11px;color:var(--red);margin:4px 0 0;display:none}
+.field-error.show{display:block}
+.form-row{margin-bottom:12px}
+
+/* ── Paywall sheet ────────────────────────────────────────── */
+.paywall-sheet{background:#fff;border-radius:20px 20px 0 0;padding:16px;border-top:.5px solid var(--border)}
+.sheet-handle{width:36px;height:3px;background:var(--border);border-radius:2px;margin:0 auto 14px}
+.sheet-title{font-size:15px;font-weight:500;color:#212529;margin:0 0 4px}
+.sheet-sub{font-size:12px;color:#6c757d;margin:0 0 14px}
+.fee-badge{display:inline-flex;align-items:center;gap:6px;background:#fff8e1;color:#7a5800;padding:6px 12px;border-radius:8px;font-size:13px;font-weight:500;border:.5px solid #FFC107;margin-bottom:14px}
+.pay-btn{width:100%;padding:13px;border:none;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px}
+.pay-btn-gold{background:#FFC107;color:#7a5800}
+.pay-btn-outline{background:#fff;color:#0F5132;border:.5px solid #0F5132}
+.manual-box{background:#f8f9fa;border-radius:10px;padding:12px;margin:8px 0}
+.manual-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:.5px solid var(--border);font-size:12px}
+.manual-row:last-child{border-bottom:none}
+.manual-label{color:#6c757d;min-width:52px}
+.manual-value{color:#212529;font-weight:500;font-size:11px}
+.upload-box{border:1px dashed #0F5132;border-radius:10px;padding:16px;text-align:center;margin-top:8px;background:#e8f5ee;cursor:pointer}
+.upload-icon{font-size:24px;color:#0F5132;margin-bottom:6px}
+.upload-label{font-size:12px;color:#0F5132;font-weight:500}
+.upload-sub{font-size:11px;color:#6c757d;margin-top:3px}
+.manual-hidden{display:none}
+.manual-hidden.show{display:block}
+
+/* ── Admin panel ──────────────────────────────────────────── */
+.admin-feed{padding:10px 12px;display:flex;flex-direction:column;gap:10px;background:#f8f9fa}
+.admin-card{background:#fff;border-radius:12px;border:.5px solid var(--border);overflow:hidden}
+.admin-card-header{background:#0F5132;padding:10px 12px;display:flex;align-items:center;justify-content:space-between}
+.admin-card-header span{color:#fff;font-size:12px;font-weight:500}
+.admin-badge{padding:2px 8px;border-radius:8px;font-size:10px;font-weight:500}
+.badge-pending{background:#fff8e1;color:#7a5800}
+.badge-manual{background:#e8f5ee;color:#0a3d24}
+.badge-chapa{background:#f0f4ff;color:#3050c0}
+.proof-row{display:flex;gap:10px;padding:10px 12px}
+.proof-thumb{width:80px;height:80px;border-radius:8px;background:#e8f5ee;flex-shrink:0;display:flex;align-items:center;justify-content:center;border:.5px solid var(--border);cursor:pointer;position:relative;overflow:hidden}
+.proof-thumb-label{position:absolute;bottom:0;left:0;right:0;background:rgba(15,81,50,.7);color:#fff;font-size:9px;text-align:center;padding:2px 0}
+.proof-meta{flex:1}
+.meta-row{display:flex;justify-content:space-between;margin-bottom:5px}
+.meta-key{font-size:11px;color:#6c757d}
+.meta-val{font-size:11px;color:#212529;font-weight:500;text-align:right;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.admin-actions{display:flex;gap:6px;padding:0 12px 12px}
+.action-approve{flex:1;padding:10px;background:#e8f5ee;color:#0a3d24;border:.5px solid #0F5132;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px}
+.action-reject{flex:1;padding:10px;background:#fef2f2;color:#991b1b;border:.5px solid var(--red);border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px}
+.admin-card.resolved .admin-card-header{background:#6c757d}
+.resolved-banner{background:#f8f9fa;text-align:center;padding:8px;font-size:11px;color:#6c757d;border-top:.5px solid var(--border)}
+
+/* ── Profile ──────────────────────────────────────────────── */
+.profile-body{padding:16px}
+.avatar-row{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.avatar{width:52px;height:52px;border-radius:50%;background:#0F5132;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:500;flex-shrink:0}
+.profile-name{font-size:15px;font-weight:500;color:#212529}
+.profile-sub{font-size:12px;color:#6c757d}
+.menu-list{background:#fff;border-radius:12px;border:.5px solid var(--border);overflow:hidden;margin-bottom:12px}
+.menu-item{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:.5px solid var(--border);cursor:pointer}
+.menu-item:last-child{border-bottom:none}
+.menu-left{display:flex;align-items:center;gap:10px;font-size:13px;color:#212529}
+.menu-left i{font-size:18px;color:#0F5132}
+.stat-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+.stat-card{background:#fff;border-radius:10px;border:.5px solid var(--border);padding:10px 12px;text-align:center}
+.stat-num{font-size:20px;font-weight:500;color:#0F5132}
+.stat-lbl{font-size:11px;color:#6c757d;margin-top:2px}
+
+/* ── Saved favorites / Unlocked contacts list ─────────────── */
+.contact-card{background:#fff;border-radius:12px;border:.5px solid var(--border);padding:12px;display:flex;align-items:flex-start;gap:10px;margin-bottom:0}
+.contact-icon{width:44px;height:44px;border-radius:10px;background:#e8f5ee;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.contact-body{flex:1;min-width:0}
+.contact-title{font-size:13px;font-weight:500;color:#212529}
+.contact-meta{font-size:11px;color:#6c757d;margin-top:2px}
+.contact-phone{font-size:12px;color:#0F5132;font-weight:500;margin-top:4px;display:flex;align-items:center;gap:4px}
+.contact-actions{display:flex;gap:6px;margin-top:8px}
+.contact-action-btn{flex:1;padding:6px;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;border:none}
+.btn-call{background:#e8f5ee;color:#0a3d24}
+.btn-remove{background:#f8f9fa;color:#6c757d;border:.5px solid var(--border) !important}
+
+/* ── Landlord upload form ─────────────────────────────────── */
+.section-head{font-size:12px;font-weight:600;color:#0F5132;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px;padding-bottom:6px;border-bottom:.5px solid var(--border)}
+.checkbox-row{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;color:#212529}
+.checkbox-row input[type=checkbox]{width:16px;height:16px;accent-color:#0F5132}
+.suitable-picker{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.suit-chip{padding:5px 10px;border-radius:16px;font-size:11px;cursor:pointer;border:.5px solid var(--border);background:#fff;color:#6c757d;font-weight:400;transition:all .15s}
+.suit-chip.chosen{background:#0F5132;color:#fff;border-color:#0F5132}
+.dim-row{display:flex;gap:6px;align-items:center}
+.dim-sep{color:#6c757d;font-size:14px;padding:0 2px}
+
+/* ── Splash screen ────────────────────────────────────────── */
+.splash{background:#0F5132;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0}
+.splash-name{font-size:36px;font-weight:600;color:#fff;letter-spacing:-1px}
+.splash-name span{color:#FFC107}
+.splash-sub{font-size:13px;color:rgba(255,255,255,.6);margin-top:8px;letter-spacing:.2px}
+.splash-loader{display:flex;gap:6px;margin-top:32px}
+.loader-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.3);animation:pulse 1.4s ease-in-out infinite}
+.loader-dot:nth-child(1){animation-delay:0s;background:#FFC107}
+.loader-dot:nth-child(2){animation-delay:.2s}
+.loader-dot:nth-child(3){animation-delay:.4s}
+@keyframes pulse{0%,80%,100%{transform:scale(.7);opacity:.4}40%{transform:scale(1);opacity:1}}
+
+/* ── Toast notification ───────────────────────────────────── */
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:#212529;color:#fff;padding:9px 16px;border-radius:10px;font-size:12px;font-weight:500;opacity:0;transition:all .3s;pointer-events:none;z-index:999;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── Empty state ──────────────────────────────────────────── */
+.empty-state{padding:40px 24px;text-align:center}
+.empty-icon{font-size:40px;color:#0F5132;opacity:.3;margin-bottom:12px}
+.empty-title{font-size:14px;font-weight:500;color:#212529;margin-bottom:6px}
+.empty-sub{font-size:12px;color:#6c757d}
+
+/* ── Chapa verify flow states ─────────────────────────────── */
+.chapa-step{display:none;padding:12px;background:#f0f4ff;border-radius:10px;margin-top:8px;font-size:12px}
+.chapa-step.show{display:block}
+.chapa-step .step-title{font-size:13px;font-weight:500;color:#212529;margin-bottom:6px}
+.chapa-step .step-body{color:#6c757d;line-height:1.6}
+.verify-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:3px 8px;border-radius:6px;font-weight:500;margin-top:6px}
+.verify-ok{background:#e8f5ee;color:#0a3d24}
+.verify-pending{background:#fff8e1;color:#7a5800}
+</style>
+</head>
+<body>
+
+<div class="demo-wrap">
+  <div class="demo-title" style="display:none">BetLink — Mobile UI Wireframe — All Screens</div>
+
+  <!-- Dev nav hidden in production -->
+
+  <div class="phone-wrap">
+    <div class="phone" role="main">
+
+      <!-- STATUS BAR (shared) -->
+      <div class="status-bar" aria-hidden="true">
+        <span>9:41</span>
+        <span><i class="ti ti-wifi" style="font-size:13px"></i> <i class="ti ti-battery-2" style="font-size:13px"></i></span>
+      </div>
+
+      <!-- ════════════════════════════════════════════
+           SCREEN 0 — SPLASH / LAUNCH
+           Full-screen Deep Emerald Green (#0F5132)
+           App name "BetLink" in white + gold accent
+           // # PULL REAL LOGO IMAGE FILE HERE
+           ════════════════════════════════════════════ -->
+      <div class="screen active" id="screen-splash" role="tabpanel">
+        <div class="splash">
+          <!-- // # PULL REAL LOGO IMAGE FILE HERE -->
+          <div class="splash-name">Bet<span>Link</span></div>
+          <div class="splash-sub">Ethiopia's rental marketplace</div>
+          <div class="splash-loader" aria-label="Loading">
+            <div class="loader-dot"></div>
+            <div class="loader-dot"></div>
+            <div class="loader-dot"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════════
+           SCREEN 1 — SIGN UP / LOGIN
+           • +251 default country code
+           • 4-digit SMS OTP panel
+           • Role selector: Renter / Landlord
+           • 10-digit ET phone validation
+           ════════════════════════════════════════════ -->
+      <div class="screen" id="screen-onboard" role="tabpanel">
+        <div style="background:#0F5132;padding:24px 16px 20px;text-align:center">
+          <!-- // # PULL REAL LOGO IMAGE FILE HERE -->
+          <div style="font-size:26px;font-weight:500;color:#fff;letter-spacing:-.5px">Bet<span style="color:#FFC107">Link</span></div>
+          <div style="font-size:12px;color:rgba(255,255,255,.7);margin-top:4px">Ethiopia's rental marketplace</div>
+          <div style="margin-top:14px;display:flex;justify-content:center;gap:6px" aria-hidden="true">
+            <div style="width:8px;height:8px;border-radius:50%;background:#FFC107"></div>
+            <div style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.3)"></div>
+            <div style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.3)"></div>
+          </div>
+        </div>
+        <div class="form-section">
+
+          <!-- Phone number row -->
+          <div class="form-row">
+            <label class="form-label" for="phone-input">Mobile number</label>
+            <div class="phone-row">
+              <div class="country-code" aria-label="Country code Ethiopia">
+                <i class="ti ti-flag" style="font-size:13px;vertical-align:-2px;margin-right:3px" aria-hidden="true"></i>+251
+              </div>
+              <input id="phone-input" class="form-input" placeholder="9X XXX XXXX" maxlength="9"
+                     inputmode="numeric" style="flex:1" aria-describedby="phone-hint phone-err"
+                     oninput="validatePhone(this)" />
+            </div>
+            <p id="phone-hint" class="field-hint">Enter your 9-digit number after +251 (e.g. 911234567)</p>
+            <p id="phone-err" class="field-error">Must be exactly 9 digits starting with 9</p>
+          </div>
+
+          <!-- OTP panel — hidden until phone is submitted -->
+          <div class="form-row" id="otp-row" style="display:none">
+            <label class="form-label" for="otp-input">Enter OTP sent to your phone</label>
+            <input id="otp-input" class="form-input" placeholder="Enter 6-digit code"
+                   maxlength="6" inputmode="numeric" style="text-align:center;font-size:20px;letter-spacing:8px"
+                   aria-label="OTP code" />
+            <p style="font-size:11px;color:#6c757d;text-align:center;margin:6px 0 0">
+              Check your SMS for the code
+            </p>
+          </div>
+
+          <!-- Name panel — hidden until OTP is verified -->
+          <div class="form-row" id="name-row" style="display:none">
+            <label class="form-label" for="name-input">Your first name</label>
+            <input id="name-input" class="form-input" placeholder="e.g. Dawit"
+                   maxlength="30" style="text-align:left"
+                   aria-label="Your name" />
+            <p style="font-size:11px;color:#6c757d;margin:6px 0 0">
+              This is how BetLink will greet you 👋
+            </p>
+          </div>
+
+          <!-- Role selector -->
+          <div class="form-row">
+            <label class="form-label">I am a</label>
+            <div class="role-toggle" role="group" aria-label="Account type">
+              <button class="role-opt" onclick="selectRole(this,'renter')" aria-pressed="false">
+                <i class="ti ti-search" style="font-size:13px;vertical-align:-2px;margin-right:4px" aria-hidden="true"></i>Renter
+              </button>
+              <button class="role-opt" onclick="selectRole(this,'landlord')" aria-pressed="false">
+                <i class="ti ti-building-store" style="font-size:13px;vertical-align:-2px;margin-right:4px" aria-hidden="true"></i>Landlord
+              </button>
+              <button class="role-opt" onclick="selectRole(this,'admin')" aria-pressed="false">
+                <i class="ti ti-shield" style="font-size:13px;vertical-align:-2px;margin-right:4px" aria-hidden="true"></i>Admin
+              </button>
+            </div>
+          </div>
+
+          <button class="cta-btn" id="continue-btn" onclick="handleContinue()">
+            <i class="ti ti-arrow-right" style="font-size:16px" aria-hidden="true"></i>
+            <span id="continue-btn-text">Continue</span>
+          </button>
+          <p style="font-size:11px;color:#6c757d;text-align:center;margin:10px 0 0">
+            By continuing you agree to our <span style="color:#0F5132;font-weight:500;cursor:pointer">Terms of Service</span>
+          </p>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════════
+           SCREEN 2 — HOME FEED
+           • "Hello, Mikael 👋" greeting
+           • Category pill bar
+           • Addis Ababa neighborhood sub-filter
+           • Property cards with expiry / unlock
+           ════════════════════════════════════════════ -->
+      <div class="screen" id="screen-home" role="tabpanel">
+        <div class="em-header">
+          <div class="em-header-row">
+            <div>
+              <div class="em-logo">Bet<span>Link</span></div>
+              <div class="greeting">Hello, <strong id="greeting-name">there 👋</strong></div>
+            </div>
+            <button class="bell-btn" id="bell-btn-home" onclick="openNotifPanel()" aria-label="Notifications">
+  <i class="ti ti-bell" style="font-size:18px;color:#fff" aria-hidden="true"></i>
+  <span id="bell-badge-home" style="display:none;position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:#FFC107;border:1.5px solid #0F5132" aria-hidden="true"></span>
+</button>
+          </div>
+          <div style="margin-top:10px;display:flex;gap:6px">
+            <input id="search-input" style="flex:1;padding:8px 10px;border-radius:8px;border:none;font-size:12px;background:rgba(255,255,255,.15);color:#fff;caret-color:#FFC107" placeholder="Search area, price…" aria-label="Search listings" onkeyup="handleSearch(this.value)" />
+            <button style="padding:8px 10px;background:#FFC107;border:none;border-radius:8px;cursor:pointer" aria-label="Submit search">
+              <i class="ti ti-search" style="font-size:16px;color:#7a5800" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Category pills -->
+        <div class="pill-scroll" role="list" aria-label="Property type filters">
+          <span class="pill active" role="listitem" onclick="filterPill(this)">All</span>
+          <span class="pill" role="listitem" onclick="filterPill(this)"><i class="ti ti-home" style="font-size:12px;vertical-align:-1px;margin-right:3px" aria-hidden="true"></i>🏠 Homes</span>
+          <span class="pill" role="listitem" onclick="filterPill(this)"><i class="ti ti-building-store" style="font-size:12px;vertical-align:-1px;margin-right:3px" aria-hidden="true"></i>🏢 Shops</span>
+          <span class="pill" role="listitem" onclick="filterPill(this)">☕ Cafés</span>
+          <span class="pill" role="listitem" onclick="filterPill(this)">🎱 Pool Zones</span>
+          <span class="pill" role="listitem" onclick="filterPill(this)">💇 Salons</span>
+        </div>
+
+        <!-- Neighborhood sub-filter — populated dynamically from API -->
+        <div class="nbr-scroll" id="nbr-scroll" role="list" aria-label="Neighborhood filters">
+          <span class="nbr active" role="listitem" onclick="filterNbr(this)">Everywhere</span>
+        </div>
+
+        <div class="screen-body">
+          <!-- Loading spinner shown while API loads -->
+          <div id="feed-loading" style="padding:40px 16px;text-align:center;color:#6c757d;font-size:13px">
+            <div style="margin-bottom:10px;font-size:24px">⏳</div>
+            Loading listings…
+          </div>
+
+          <!-- Error message shown if API is unreachable -->
+          <div id="feed-error" style="display:none;padding:32px 16px;text-align:center">
+            <div style="font-size:28px;margin-bottom:8px">⚠️</div>
+            <div style="font-size:13px;font-weight:500;color:#212529;margin-bottom:4px">Could not load listings</div>
+            <div style="font-size:12px;color:#6c757d;margin-bottom:14px">Make sure the API server is running</div>
+            <button onclick="loadBrowse()" style="padding:8px 20px;background:#0F5132;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer">Try again</button>
+          </div>
+
+          <!-- Real listings injected here by JavaScript -->
+          <div class="feed" id="feed-container" style="display:none"></div>
+
+          <!-- Empty state -->
+          <div id="feed-empty" style="display:none;padding:40px 16px;text-align:center">
+            <div style="font-size:28px;margin-bottom:8px">🏠</div>
+            <div style="font-size:13px;font-weight:500;color:#212529">No listings found</div>
+            <div style="font-size:12px;color:#6c757d;margin-top:4px">Try a different filter</div>
+          </div>
+        </div><!-- /screen-body -->
+
+        <nav class="bottom-nav" aria-label="Main navigation">
+          <div class="nav-item active" onclick="showScreen('home',null)" aria-current="page">
+            <i class="ti ti-home" aria-hidden="true"></i><span>Explore</span>
+          </div>
+          <div class="nav-item" onclick="showScreen('saved',null)">
+            <i class="ti ti-heart" aria-hidden="true"></i><span>Saved</span>
+          </div>
+          <div class="nav-item" onclick="showScreen('unlocked',null)">
+            <i class="ti ti-lock-open" aria-hidden="true"></i><span>Unlocked</span>
+          </div>
+          <div class="nav-item" onclick="showScreen('profile',null)">
+            <i class="ti ti-user-circle" aria-hidden="true"></i><span>Profile</span>
+          </div>
+        </nav>
+      </div><!-- /screen-home -->
+
+      <!-- ════════════════════════════════════════════
+           SCREEN 3a — PAYWALL (RENTER UNLOCK — 100 ETB)
+           Dual-payment gateway:
+           • Flow A: Chapa API (Telebirr / CBE Birr)
+             → form-urlencoded checkout, 2-step backend
+               verify (state + exact price 100 ETB)
+           • Flow B: Manual bank transfer
+             → CBE & Telebirr static placeholders
+             → Receipt image upload
+           ════════════════════════════════════════════ -->
+      <div class="screen" id="screen-paywall-renter" role="tabpanel">
+        <div class="em-header" style="padding:12px 16px">
+          <div class="em-header-row">
+            <button style="background:rgba(255,255,255,.15);border:none;border-radius:8px;padding:5px 8px;cursor:pointer;display:flex;align-items:center;gap:4px;color:#fff;font-size:12px"
+                    onclick="showScreen('home',null)" aria-label="Go back">
+              <i class="ti ti-arrow-left" style="font-size:15px" aria-hidden="true"></i>Back
+            </button>
+            <div style="font-size:13px;font-weight:500;color:#fff">Unlock contact</div>
+            <div style="width:52px"></div>
+          </div>
+        </div>
+        <div class="screen-body">
+          <!-- Property summary card -->
+          <div style="padding:12px;background:#f8f9fa">
+            <div class="prop-card">
+              <div style="padding:10px 12px;border-bottom:.5px solid var(--border)">
+                <div style="font-size:13px;font-weight:500;color:#212529">Commercial shop — Bole Road</div>
+                <div style="font-size:12px;color:#6c757d;margin-top:2px">
+                  <i class="ti ti-map-pin" style="font-size:11px" aria-hidden="true"></i> Bole &nbsp;•&nbsp; 6m × 4m &nbsp;•&nbsp; 15,000 ETB/mo
+                </div>
+              </div>
+              <div style="padding:10px 12px">
+                <div style="font-size:11px;color:#6c757d;margin-bottom:6px">What you get after paying</div>
+                <div style="display:flex;flex-direction:column;gap:4px">
+                  <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#212529">
+                    <i class="ti ti-check" style="color:#0F5132;font-size:14px" aria-hidden="true"></i>Landlord's verified phone number
+                  </div>
+                  <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#212529">
+                    <i class="ti ti-check" style="color:#0F5132;font-size:14px" aria-hidden="true"></i>Address &amp; access directions
+                  </div>
+                  <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#212529">
+                    <i class="ti ti-check" style="color:#0F5132;font-size:14px" aria-hidden="true"></i>Viewable anytime in My Unlocked
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Payment sheet -->
+          <div class="paywall-sheet">
+            <div class="sheet-handle" aria-hidden="true"></div>
+            <div class="sheet-title">Choose payment method</div>
+            <div class="sheet-sub">One-time unlock fee — non-refundable</div>
+            <div class="fee-badge">
+              <i class="ti ti-lock-open" style="font-size:16px;color:#FFC107" aria-hidden="true"></i>
+              100 ETB unlock fee
+            </div>
+
+            <!-- Flow A: Chapa instant pay -->
+            <button class="pay-btn pay-btn-gold" onclick="startChapaPayment()" aria-label="Pay 100 ETB instantly via Telebirr or CBE">
+              <i class="ti ti-bolt" style="font-size:18px" aria-hidden="true"></i>
+              ⚡ Instant Pay — Telebirr / CBE via Chapa
+            </button>
+
+            <div id="chapa-renter-step" class="chapa-step">
+              <div class="step-title">Redirecting to Chapa checkout…</div>
+              <div class="step-body">
+                Checking: payment state <span class="verify-badge verify-pending"><i class="ti ti-clock" style="font-size:11px" aria-hidden="true"></i> Verifying…</span>
+              </div>
+            </div>
+
+            <div class="divider-or"><span>or</span></div>
+
+            <!-- Flow B: Manual bank transfer -->
+            <button class="pay-btn pay-btn-outline" onclick="toggleManual('renter')" aria-expanded="false" id="manual-toggle-renter">
+              <i class="ti ti-building-bank" style="font-size:18px" aria-hidden="true"></i>
+              🏦 Manual Bank Transfer
+            </button>
+            <div class="manual-hidden" id="manual-renter">
+              <div class="manual-box">
+                <div style="font-size:11px;font-weight:500;color:#0F5132;margin-bottom:6px">Transfer exactly 100 ETB to one of:</div>
+                <div class="manual-row">
+                  <span class="manual-label"><i class="ti ti-building-bank" style="font-size:13px;vertical-align:-2px;margin-right:3px" aria-hidden="true"></i>CBE</span>
+                  <span class="manual-value">1000385968397 (BetLink Platform)</span>
+                </div>
+                <div class="manual-row">
+                  <span class="manual-label"><i class="ti ti-device-mobile" style="font-size:13px;vertical-align:-2px;margin-right:3px" aria-hidden="true"></i>Telebirr</span>
+                  <span class="manual-value">0920323890 (BetLink Platform)</span>
+                </div>
+              </div>
+              <!-- Hidden file input -->
+              <input type="file" id="receipt-upload-renter" accept="image/*" style="display:none" onchange="handleReceiptUpload(this)" />
+              <div class="upload-box" role="button" tabindex="0" aria-label="Upload payment receipt screenshot"
+                   onclick="document.getElementById('receipt-upload-renter').click()">
+                <div class="upload-icon"><i class="ti ti-upload" aria-hidden="true"></i></div>
+                <div class="upload-label" id="upload-label-renter">⚠️ Upload payment receipt screenshot/photo here</div>
+                <div class="upload-sub">Tap to take photo or choose from gallery</div>
+              </div>
+              <button class="cta-btn" style="margin-top:12px" id="submit-manual-btn" onclick="submitManualPayment()">
+                <i class="ti ti-send" style="font-size:16px" aria-hidden="true"></i>
+                Submit receipt for review
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════════
+           SCREEN 3b — PAYWALL (LANDLORD POST — 200 ETB)
+           Full listing submission form:
+           • Category: Residential / Commercial
+           • Neighborhood (text)
+           • Rent price in Birr
+           • 10-digit ET phone
+           • Dimensions (e.g. 4x3, 6x4)
+           • Suitable for (chip multi-select)
+           • Dual payment flow (same A/B gates, 200 ETB)
+           ════════════════════════════════════════════ -->
+      <div class="screen" id="screen-paywall-landlord" role="tabpanel">
+        <div class="em-header" style="padding:12px 16px">
+          <div class="em-header-row">
+            <button style="background:rgba(255,255,255,.15);border:none;border-radius:8px;padding:5px 8px;cursor:pointer;display:flex;align-items:center;gap:4px;color:#fff;font-size:12px"
+                    onclick="showScreen('home',null)" aria-label="Go back">
+              <i class="ti ti-arrow-left" style="font-size:15px" aria-hidden="true"></i>Back
+            </button>
+            <div style="font-size:13px;font-weight:500;color:#fff">Post a listing</div>
+            <div style="width:52px"></div>
+          </div>
+        </div>
+        <div class="screen-body">
+          <div class="form-section" style="padding-bottom:0">
+
+            <div class="section-head">Property details</div>
+
+            <!-- Category -->
+            <div class="form-row">
+              <label class="form-label" for="cat-select">Category</label>
+              <select id="cat-select" class="form-select" onchange="handleCategoryChange(this.value)" aria-label="Property category">
+                <option value="">Select category…</option>
+                <option value="residential">🏠 Residential</option>
+                <option value="commercial">🏢 Commercial</option>
+              </select>
+            </div>
+
+            <!-- Neighborhood -->
+            <div class="form-row">
+              <label class="form-label" for="nbr-input">Neighborhood / Area</label>
+              <input id="nbr-input" class="form-input" placeholder="e.g. Bole, CMC, Megenagna, Ayat…" />
+            </div>
+
+            <!-- Rent price -->
+            <div class="form-row">
+              <label class="form-label" for="rent-input">Monthly rent (ETB / Birr)</label>
+              <div style="display:flex;gap:6px;align-items:center">
+                <input id="rent-input" class="form-input" type="number" placeholder="e.g. 15000" inputmode="numeric" style="flex:1" />
+                <span style="font-size:12px;color:#6c757d;white-space:nowrap">ETB/mo</span>
+              </div>
+            </div>
+
+            <!-- Phone number -->
+            <div class="form-row">
+              <label class="form-label" for="ll-phone">Your contact phone number</label>
+              <div class="phone-row">
+                <div class="country-code" aria-label="Ethiopia +251">
+                  <i class="ti ti-flag" style="font-size:13px;vertical-align:-2px;margin-right:3px" aria-hidden="true"></i>+251
+                </div>
+                <input id="ll-phone" class="form-input" placeholder="9X XXX XXXX" maxlength="9"
+                       inputmode="numeric" style="flex:1" aria-describedby="ll-phone-hint ll-phone-err"
+                       oninput="validatePhone(this,'ll-phone-err')" />
+              </div>
+              <p id="ll-phone-hint" class="field-hint">9-digit number after +251 (validated)</p>
+              <p id="ll-phone-err" class="field-error">Must be exactly 9 digits starting with 9</p>
+            </div>
+
+            <!-- Dimensions (commercial only) -->
+            <div class="form-row" id="dim-row" style="display:none">
+              <label class="form-label">Shop dimensions</label>
+              <div class="dim-row">
+                <input class="form-input" id="dim-w" type="number" placeholder="Width (m)" style="flex:1" inputmode="decimal" min="1" />
+                <span class="dim-sep">×</span>
+                <input class="form-input" id="dim-h" type="number" placeholder="Length (m)" style="flex:1" inputmode="decimal" min="1" />
+              </div>
+              <p class="field-hint">e.g. 6 × 4 produces "6x4" in the listing</p>
+            </div>
+
+            <!-- Suitable for (commercial only) -->
+            <div class="form-row" id="suitable-row" style="display:none">
+              <label class="form-label">Suitable for (select all that apply)</label>
+              <div class="suitable-picker" role="group" aria-label="Business type suitability">
+                <span class="suit-chip" onclick="toggleChip(this)" data-val="Cafe">☕ Cafe</span>
+                <span class="suit-chip" onclick="toggleChip(this)" data-val="Boutique">👗 Boutique</span>
+                <span class="suit-chip" onclick="toggleChip(this)" data-val="Electronics">📱 Electronics</span>
+                <span class="suit-chip" onclick="toggleChip(this)" data-val="Pool Zone">🎱 Pool Zone</span>
+                <span class="suit-chip" onclick="toggleChip(this)" data-val="Salon">💇 Salon</span>
+                <span class="suit-chip" onclick="toggleChip(this)" data-val="Other">⋯ Other</span>
+              </div>
+            </div>
+
+            <!-- Description -->
+            <div class="form-row">
+              <label class="form-label" for="desc-input">Description</label>
+              <textarea id="desc-input" class="form-input" placeholder="Describe the property — floors, rooms, furnishing, location details…" rows="3" style="resize:vertical;min-height:72px"></textarea>
+            </div>
+
+            <!-- Photos — real multi-image picker -->
+            <div class="form-row">
+              <label class="form-label">Property photos <span style="color:#6c757d;font-weight:400">(optional)</span></label>
+              <input type="file" id="photo-file-input" accept="image/jpeg,image/png,image/webp" multiple style="display:none" onchange="handlePropertyPhotos(this)" />
+              <div id="photo-upload-box" class="upload-box" role="button" tabindex="0"
+                   aria-label="Add property photos"
+                   onclick="document.getElementById('photo-file-input').click()"
+                   onkeydown="if(event.key==='Enter'||event.key===' ')document.getElementById('photo-file-input').click()">
+                <div class="upload-icon"><i class="ti ti-photo-plus" aria-hidden="true"></i></div>
+                <div class="upload-label" id="photo-upload-label">Add photos of your property</div>
+                <div class="upload-sub">Up to 5 images · JPG or PNG</div>
+              </div>
+              <!-- Thumbnail strip — hidden until photos are chosen -->
+              <div id="photo-thumbs" style="display:none;display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"></div>
+            </div>
+
+            <div class="section-head" style="margin-top:8px">Listing fee — 200 ETB</div>
+            <div style="font-size:12px;color:#6c757d;margin-bottom:12px">Pay once to publish for 30 days. Renew anytime.</div>
+
+            <!-- Fee badge -->
+            <div class="fee-badge" style="margin-bottom:14px">
+              <i class="ti ti-receipt" style="font-size:16px;color:#FFC107" aria-hidden="true"></i>
+              200 ETB listing fee
+            </div>
+
+            <!-- Flow A: Chapa -->
+            <button class="pay-btn pay-btn-gold" onclick="startLandlordChapaPayment()" style="margin-bottom:8px">
+              <i class="ti ti-bolt" style="font-size:18px" aria-hidden="true"></i>
+              ⚡ Instant Pay — Telebirr / CBE via Chapa
+            </button>
+            <div id="chapa-landlord-step" class="chapa-step">
+              <div class="step-title">Redirecting to Chapa checkout…</div>
+              <div class="step-body">
+                <!-- Backend verification notes (developer reference):
+                     POST /api/chapa/initiate
+                       Content-Type: application/x-www-form-urlencoded
+                       amount=200&currency=ETB&tx_ref=landlord_{uuid}&
+                       callback_url=https://betlink.et/api/chapa/verify&
+                       return_url=https://betlink.et/listing/success&
+                       customization[title]=BetLink+Post+Listing
+
+                     Step 1 — State check: status must equal "success"
+                     Step 2 — Price check: data.amount must equal 200 (ETB)
+                     If both pass → publish listing, set expiry = now + 30 days -->
+                Checking: payment state <span class="verify-badge verify-pending"><i class="ti ti-clock" style="font-size:11px" aria-hidden="true"></i> Verifying…</span>
+              </div>
+            </div>
+
+            <div class="divider-or"><span>or</span></div>
+
+            <!-- Flow B: Manual transfer -->
+            <button class="pay-btn pay-btn-outline" onclick="toggleManual('landlord')" aria-expanded="false" id="manual-toggle-landlord" style="margin-bottom:8px">
+              <i class="ti ti-building-bank" style="font-size:18px" aria-hidden="true"></i>
+              🏦 Manual Bank Transfer
+            </button>
+            <div class="manual-hidden" id="manual-landlord" style="padding-bottom:16px">
+              <div class="manual-box">
+                <div style="font-size:11px;font-weight:500;color:#0F5132;margin-bottom:6px">Transfer exactly 200 ETB to one of:</div>
+                <div class="manual-row">
+                  <span class="manual-label"><i class="ti ti-building-bank" style="font-size:13px;vertical-align:-2px;margin-right:3px" aria-hidden="true"></i>CBE</span>
+                  <span class="manual-value">1000385968397 (BetLink Platform)</span>
+                </div>
+                <div class="manual-row">
+                  <span class="manual-label"><i class="ti ti-device-mobile" style="font-size:13px;vertical-align:-2px;margin-right:3px" aria-hidden="true"></i>Telebirr</span>
+                  <span class="manual-value">0920323890 (BetLink Platform)</span>
+                </div>
+              </div>
+              <input type="file" id="landlord-receipt-input" accept="image/*" style="display:none" onchange="handleLandlordReceiptUpload(this)" />
+              <div class="upload-box" role="button" tabindex="0" aria-label="Upload payment receipt screenshot" onclick="document.getElementById('landlord-receipt-input').click()">
+                <div class="upload-icon"><i class="ti ti-upload" aria-hidden="true"></i></div>
+                <div class="upload-label" id="landlord-upload-label">⚠️ Upload payment receipt screenshot/photo here</div>
+                <div class="upload-sub">Tap to take photo or choose from gallery</div>
+              </div>
+              <button class="cta-btn" id="submit-landlord-btn" style="margin-top:12px" onclick="submitLandlordManual()">
+                <i class="ti ti-send" style="font-size:16px" aria-hidden="true"></i>
+                Submit listing for review
+              </button>
+            </div>
+
+          </div><!-- /form-section -->
+        </div><!-- /screen-body -->
+      </div><!-- /screen-paywall-landlord -->
+
+      <!-- ════════════════════════════════════════════
+           SCREEN 4 — SAVED FAVORITES
+           ════════════════════════════════════════════ -->
+      <div class="screen" id="screen-saved" role="tabpanel">
+        <div class="em-header">
+          <div class="em-header-row">
+            <div class="em-logo">Bet<span>Link</span></div>
+            <div style="font-size:13px;color:rgba(255,255,255,.8)">❤️ Saved</div>
+          </div>
+        </div>
+        <div class="screen-body">
+          <div class="feed" id="saved-feed">
+            <!-- Loaded dynamically -->
+          </div>
+        </div>
+        <nav class="bottom-nav" aria-label="Main navigation">
+          <div class="nav-item" onclick="showScreen('home',null)"><i class="ti ti-home" aria-hidden="true"></i><span>Explore</span></div>
+          <div class="nav-item active" aria-current="page"><i class="ti ti-heart" aria-hidden="true"></i><span>Saved</span></div>
+          <div class="nav-item" onclick="showScreen('unlocked',null)"><i class="ti ti-lock-open" aria-hidden="true"></i><span>Unlocked</span></div>
+          <div class="nav-item" onclick="showScreen('profile',null)"><i class="ti ti-user-circle" aria-hidden="true"></i><span>Profile</span></div>
+        </nav>
+      </div>
+
+      <!-- ════════════════════════════════════════════
+           SCREEN 5 — MY UNLOCKED CONTACTS
+           Stores all properties this renter's user ID
+           has verified payments for → free re-access
+           ════════════════════════════════════════════ -->
+      <div class="screen" id="screen-unlocked" role="tabpanel">
+        <div class="em-header">
+          <div class="em-header-row">
+            <div class="em-logo">Bet<span>Link</span></div>
+            <div style="font-size:13px;color:rgba(255,255,255,.8)">🔓 Unlocked</div>
+          </div>
+          <div class="greeting">Properties you've paid to access</div>
+        </div>
+        <div class="screen-body">
+          <div class="feed" id="unlocked-feed">
+            <!-- Loaded dynamically from API -->
+          </div>
+        </div>
+        <nav class="bottom-nav" aria-label="Main navigation">
+          <div class="nav-item" onclick="showScreen('home',null)"><i class="ti ti-home" aria-hidden="true"></i><span>Explore</span></div>
+          <div class="nav-item" onclick="showScreen('saved',null)"><i class="ti ti-heart" aria-hidden="true"></i><span>Saved</span></div>
+          <div class="nav-item active" aria-current="page"><i class="ti ti-lock-open" aria-hidden="true"></i><span>Unlocked</span></div>
+          <div class="nav-item" onclick="showScreen('profile',null)"><i class="ti ti-user-circle" aria-hidden="true"></i><span>Profile</span></div>
+        </nav>
+      </div><!-- /screen-unlocked -->
+
+      <!-- ════════════════════════════════════════════
+           SCREEN 6 — ADMIN PANEL
+           Secured ADMIN_ID view:
+           • Incoming screenshot stream preview
+           • Transaction metadata sidebar
+           • [ ✅ Approve Request ] / [ ❌ Reject Proof ]
+             inline interactive controls
+           • Admin bottom nav (Queue / Listings / Users / Reports)
+           ════════════════════════════════════════════ -->
+      <div class="screen" id="screen-admin" role="tabpanel">
+        <div class="em-header">
+          <div class="em-header-row">
+            <div>
+              <div class="em-logo">Bet<span>Link</span> <span style="font-size:12px;font-weight:400;color:rgba(255,255,255,.7)">Admin</span></div>
+              <div class="greeting">Review queue &nbsp;<span id="pending-count" style="background:#FFC107;color:#7a5800;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:500">3 pending</span></div>
+            </div>
+            <button class="bell-btn" aria-label="Admin settings" onclick="showAdminSettings()">
+  <i class="ti ti-settings" style="font-size:18px;color:#fff" aria-hidden="true"></i>
+</button>
+          </div>
+        </div>
+        <div class="screen-body">
+          <div class="admin-feed">
+
+            <!-- Admin card 1 — Manual renter unlock -->
+            <div class="admin-card" id="admin-card-1">
+              <div class="admin-card-header">
+                <span><i class="ti ti-building-bank" style="font-size:13px;vertical-align:-1px;margin-right:4px" aria-hidden="true"></i>Manual payment — renter unlock</span>
+                <span class="admin-badge badge-manual">Manual</span>
+              </div>
+              <div class="proof-row">
+                <div class="proof-thumb" onclick="showToast('Viewing full screenshot…')" title="Click to view full screenshot" role="button" tabindex="0">
+                  <i class="ti ti-file-invoice" style="font-size:28px;color:#0F5132" aria-hidden="true"></i>
+                  <span class="proof-thumb-label">View proof</span>
+                </div>
+                <div class="proof-meta">
+                  <div class="meta-row">
+                    <span class="meta-key">User ID</span>
+                    <span class="meta-val">TG:382716</span>
+                  </div>
+                  <div class="meta-row">
+                    <span class="meta-key">House ID</span>
+                    <span class="meta-val">demo-004</span>
+                  </div>
+                  <div class="meta-row">
+                    <span class="meta-key">Fee</span>
+                    <span class="meta-val" style="color:#0F5132;font-weight:500">100 ETB</span>
+                  </div>
+                  <div class="meta-row">
+                    <span class="meta-key">Expected</span>
+                    <span class="meta-val">Unlock fee</span>
+                  </div>
+                  <div class="meta-row" style="border-bottom:none">
+                    <span class="meta-key">Submitted</span>
+                    <span class="meta-val">2 min ago</span>
+                  </div>
+                </div>
+              </div>
+              <div class="admin-actions">
+                <button class="action-approve" onclick="adminAction('admin-card-1','approved','renter')" aria-label="Approve this unlock request">
+                  <i class="ti ti-check" style="font-size:14px" aria-hidden="true"></i>✅ Approve Request
+                </button>
+                <button class="action-reject" onclick="adminAction('admin-card-1','rejected','renter')" aria-label="Reject this proof">
+                  <i class="ti ti-x" style="font-size:14px" aria-hidden="true"></i>❌ Reject Proof
+                </button>
+              </div>
+            </div>
+
+            <!-- Admin card 2 — Chapa landlord post -->
+            <div class="admin-card" id="admin-card-2">
+              <div class="admin-card-header">
+                <span><i class="ti ti-home" style="font-size:13px;vertical-align:-1px;margin-right:4px" aria-hidden="true"></i>New listing — landlord post</span>
+                <span class="admin-badge badge-chapa">Chapa</span>
+              </div>
+              <div class="proof-row">
+                <div class="proof-thumb" style="background:#f0f4ff" onclick="showToast('Viewing Chapa receipt…')" role="button" tabindex="0">
+                  <i class="ti ti-photo" style="font-size:28px;color:#378ADD" aria-hidden="true"></i>
+                  <span class="proof-thumb-label">Chapa receipt</span>
+                </div>
+                <div class="proof-meta">
+                  <div class="meta-row">
+                    <span class="meta-key">Landlord</span>
+                    <span class="meta-val">TG:510234</span>
+                  </div>
+                  <div class="meta-row">
+                    <span class="meta-key">Area</span>
+                    <span class="meta-val">CMC</span>
+                  </div>
+                  <div class="meta-row">
+                    <span class="meta-key">Rent</span>
+                    <span class="meta-val" style="color:#0F5132;font-weight:500">12,000 ETB/mo</span>
+                  </div>
+                  <div class="meta-row">
+                    <span class="meta-key">Tx ref</span>
+                    <span class="meta-val">landlord_b3f9a2</span>
+                  </div>
+                  <div class="meta-row" style="border-bottom:none">
+                    <span class="meta-key">Fee paid</span>
+                    <span class="meta-val" style="color:#0F5132">200 ETB ✓</span>
+                  </div>
+                </div>
+              </div>
+              <div class="admin-actions">
+                <button class="action-approve" onclick="adminAction('admin-card-2','approved','landlord')" aria-label="Approve this listing">
+                  <i class="ti ti-check" style="font-size:14px" aria-hidden="true"></i>✅ Approve Request
+                </button>
+                <button class="action-reject" onclick="adminAction('admin-card-2','rejected','landlord')" aria-label="Reject this listing">
+                  <i class="ti ti-x" style="font-size:14px" aria-hidden="true"></i>❌ Reject Proof
+                </button>
+              </div>
+            </div>
+
+            <!-- Admin card 3 — Manual renter unlock (2nd) -->
+            <div class="admin-card" id="admin-card-3">
+              <div class="admin-card-header">
+                <span><i class="ti ti-building-bank" style="font-size:13px;vertical-align:-1px;margin-right:4px" aria-hidden="true"></i>Manual payment — renter unlock</span>
+                <span class="admin-badge badge-manual">Manual</span>
+              </div>
+              <div class="proof-row">
+                <div class="proof-thumb" onclick="showToast('Viewing full screenshot…')" role="button" tabindex="0">
+                  <i class="ti ti-file-invoice" style="font-size:28px;color:#0F5132" aria-hidden="true"></i>
+                  <span class="proof-thumb-label">View proof</span>
+                </div>
+                <div class="proof-meta">
+                  <div class="meta-row">
+                    <span class="meta-key">User ID</span>
+                    <span class="meta-val">TG:291045</span>
+                  </div>
+                  <div class="meta-row">
+                    <span class="meta-key">House ID</span>
+                    <span class="meta-val">demo-011</span>
+                  </div>
+                  <div class="meta-row">
+                    <span class="meta-key">Fee</span>
+                    <span class="meta-val" style="color:#0F5132;font-weight:500">100 ETB</span>
+                  </div>
+                  <div class="meta-row">
+                    <span class="meta-key">Expected</span>
+                    <span class="meta-val">Unlock fee</span>
+                  </div>
+                  <div class="meta-row" style="border-bottom:none">
+                    <span class="meta-key">Submitted</span>
+                    <span class="meta-val">17 min ago</span>
+                  </div>
+                </div>
+              </div>
+              <div class="admin-actions">
+                <button class="action-approve" onclick="adminAction('admin-card-3','approved','renter')" aria-label="Approve this unlock request">
+                  <i class="ti ti-check" style="font-size:14px" aria-hidden="true"></i>✅ Approve Request
+                </button>
+                <button class="action-reject" onclick="adminAction('admin-card-3','rejected','renter')" aria-label="Reject this proof">
+                  <i class="ti ti-x" style="font-size:14px" aria-hidden="true"></i>❌ Reject Proof
+                </button>
+              </div>
+            </div>
+
+          </div><!-- /admin-feed -->
+        </div><!-- /screen-body -->
+
+                <!-- Admin bottom nav -->
+        <nav class="bottom-nav" aria-label="Admin navigation">
+          <div class="nav-item active" id="admin-nav-queue" onclick="switchAdminTab('queue')" aria-current="page">
+            <i class="ti ti-layout-dashboard" aria-hidden="true"></i><span>Queue</span>
+          </div>
+          <div class="nav-item" id="admin-nav-listings" onclick="switchAdminTab('listings')">
+            <i class="ti ti-building-store" aria-hidden="true"></i><span>Listings</span>
+          </div>
+          <div class="nav-item" id="admin-nav-users" onclick="switchAdminTab('users')">
+            <i class="ti ti-users" aria-hidden="true"></i><span>Users</span>
+          </div>
+          <div class="nav-item" id="admin-nav-reports" onclick="switchAdminTab('reports')">
+            <i class="ti ti-chart-bar" aria-hidden="true"></i><span>Reports</span>
+          </div>
+        </nav>
+
+        <!-- Admin: Listings sub-view -->
+<div id="admin-view-listings" style="display:none" class="admin-feed">
+  <div style="padding:16px;text-align:center;color:#6c757d" id="admin-listings-body">
+    <i class="ti ti-loader" style="font-size:32px;color:#0F5132"></i><br>Loading listings…
+  </div>
+</div>
+
+<!-- Admin: Users sub-view -->
+<div id="admin-view-users" style="display:none" class="admin-feed">
+  <div style="padding:16px;text-align:center;color:#6c757d" id="admin-users-body">
+    <i class="ti ti-loader" style="font-size:32px;color:#0F5132"></i><br>Loading users…
+  </div>
+</div>
+
+<!-- Admin: Reports sub-view -->
+<div id="admin-view-reports" style="display:none" class="admin-feed">
+  <div id="admin-reports-body" style="padding:12px;display:flex;flex-direction:column;gap:10px">
+    <div style="background:#fff;border-radius:12px;padding:14px;border:.5px solid var(--border)">
+      <div style="font-size:11px;color:#6c757d;margin-bottom:4px">TOTAL ACTIVE LISTINGS</div>
+      <div id="rpt-listings" style="font-size:28px;font-weight:700;color:#0F5132">—</div>
+    </div>
+    <div style="background:#fff;border-radius:12px;padding:14px;border:.5px solid var(--border)">
+      <div style="font-size:11px;color:#6c757d;margin-bottom:4px">TOTAL USERS</div>
+      <div id="rpt-users" style="font-size:28px;font-weight:700;color:#0F5132">—</div>
+    </div>
+    <div style="background:#fff;border-radius:12px;padding:14px;border:.5px solid var(--border)">
+      <div style="font-size:11px;color:#6c757d;margin-bottom:4px">PENDING PAYMENTS</div>
+      <div id="rpt-pending" style="font-size:28px;font-weight:700;color:#FFC107">—</div>
+    </div>
+  </div>
+</div>
+      </div><!-- /screen-admin -->
+
+      <!-- ════════════════════════════════════════════
+           SCREEN 7 — PROFILE / UPLOAD CENTER
+           ════════════════════════════════════════════ -->
+      <div class="screen" id="screen-profile" role="tabpanel">
+        <div class="em-header">
+          <div class="em-header-row">
+            <div class="em-logo">Bet<span>Link</span></div>
+           <button class="bell-btn" id="bell-btn-profile" onclick="openNotifPanel()" aria-label="Notifications">
+  <i class="ti ti-bell" style="font-size:18px;color:#fff" aria-hidden="true"></i>
+  <span id="bell-badge-profile" style="display:none;position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:#FFC107;border:1.5px solid #0F5132" aria-hidden="true"></span>
+</button>
+          </div>
+        </div>
+        <div class="screen-body">
+          <div class="profile-body">
+            <div class="avatar-row">
+              <div class="avatar" id="profile-avatar" aria-hidden="true">?</div>
+              <div>
+                <div class="profile-name" id="profile-name">Loading…</div>
+                <div class="profile-sub" id="profile-phone"><i class="ti ti-phone" style="font-size:12px;vertical-align:-1px;margin-right:3px" aria-hidden="true"></i>—</div>
+                <div style="margin-top:4px"><span id="profile-role" style="background:#e8f5ee;color:#0a3d24;font-size:11px;padding:2px 8px;border-radius:6px;font-weight:500">—</span></div>
+              </div>
+            </div>
+
+            <div class="stat-row">
+              <div class="stat-card">
+                <div class="stat-num" id="stat-unlocked">—</div>
+                <div class="stat-lbl">Unlocked contacts</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-num" id="stat-saved">—</div>
+                <div class="stat-lbl">Saved listings</div>
+              </div>
+            </div>
+
+            <div class="menu-list">
+              <div class="menu-item" onclick="showScreen('unlocked',null)">
+                <div class="menu-left"><i class="ti ti-lock-open" aria-hidden="true"></i>My unlocked contacts</div>
+                <i class="ti ti-chevron-right" style="font-size:16px;color:#6c757d" aria-hidden="true"></i>
+              </div>
+              <div class="menu-item" onclick="showScreen('saved',null)">
+                <div class="menu-left"><i class="ti ti-heart" aria-hidden="true"></i>Saved favorites</div>
+                <i class="ti ti-chevron-right" style="font-size:16px;color:#6c757d" aria-hidden="true"></i>
+              </div>
+              <div class="menu-item" onclick="showScreen('paywall-landlord',null)">
+                <div class="menu-left"><i class="ti ti-upload" aria-hidden="true"></i>Upload center — post a listing</div>
+                <i class="ti ti-chevron-right" style="font-size:16px;color:#6c757d" aria-hidden="true"></i>
+              </div>
+              <div class="menu-item" onclick="showToast('Payment history')">
+                <div class="menu-left"><i class="ti ti-receipt" aria-hidden="true"></i>Payment history</div>
+                <i class="ti ti-chevron-right" style="font-size:16px;color:#6c757d" aria-hidden="true"></i>
+              </div>
+            </div>
+
+            <div class="menu-list">
+              <div class="menu-item" onclick="showToast('Help & support')">
+                <div class="menu-left"><i class="ti ti-help-circle" aria-hidden="true"></i>Help &amp; support</div>
+                <i class="ti ti-chevron-right" style="font-size:16px;color:#6c757d" aria-hidden="true"></i>
+              </div>
+              <div class="menu-item" onclick="logout()">
+                <div class="menu-left" style="color:#e24b4a"><i class="ti ti-logout" style="color:#e24b4a" aria-hidden="true"></i>Sign out</div>
+                <i class="ti ti-chevron-right" style="font-size:16px;color:#6c757d" aria-hidden="true"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+        <nav class="bottom-nav" aria-label="Main navigation">
+          <div class="nav-item" onclick="showScreen('home',null)"><i class="ti ti-home" aria-hidden="true"></i><span>Explore</span></div>
+          <div class="nav-item" onclick="showScreen('saved',null)"><i class="ti ti-heart" aria-hidden="true"></i><span>Saved</span></div>
+          <div class="nav-item" onclick="showScreen('unlocked',null)"><i class="ti ti-lock-open" aria-hidden="true"></i><span>Unlocked</span></div>
+          <div class="nav-item active" aria-current="page"><i class="ti ti-user-circle" aria-hidden="true"></i><span>Profile</span></div>
+        </nav>
+      </div>
+
+    </div><!-- /phone -->
+  </div><!-- /phone-wrap -->
+</div><!-- /demo-wrap -->
+
+<!-- ── Notification Panel ──────────────────────────────── -->
+<div id="notif-overlay" onclick="closeNotifPanel()"
+     style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:999"></div>
+<div id="notif-panel"
+     style="display:none;position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:390px;min-height:300px;max-height:70vh;background:#fff;border-radius:16px 16px 0 0;
+            z-index:1000;overflow:hidden;flex-direction:column;">
+  <div style="padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:.5px solid rgba(0,0,0,.08)">
+    <span style="font-weight:600;font-size:14px;color:#212529">Notifications</span>
+    <button onclick="markAllNotifsRead()"
+            style="font-size:11px;color:#0F5132;background:none;border:none;cursor:pointer;font-weight:500">
+      Mark all read
+    </button>
+  </div>
+  <div id="notif-list" style="overflow-y:auto;flex:1;padding:8px 0"></div>
+</div>
+
+
+<!-- Toast notification -->
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ══════════════════════════════════════════════════════════
+   BETLINK UI CONTROLLER — API-Connected Version
+   Browse screen now fetches real data from betlink_api.py
+   All other screens unchanged from original wireframe.
+══════════════════════════════════════════════════════════ */
+
+// ── API base URL — change this when you deploy to a real server ──
+const API_BASE = 'http://127.0.0.1:5000';
+
+// ── Session token (set after login — used for authenticated calls) ──
+let sessionToken = localStorage.getItem('betlink_token') || null;
+
+// ── Current browse filter state ──
+let currentCategory     = null;   // null = All
+let currentNeighborhood = null;   // null = Everywhere
+
+
+// ════════════════════════════════════════════════════════
+//  BROWSE SCREEN — fetches real listings from the API
+// ════════════════════════════════════════════════════════
+
+async function loadBrowse(searchQuery = '') {
+  // Show loading, hide everything else
+  document.getElementById('feed-loading').style.display  = 'block';
+  document.getElementById('feed-error').style.display    = 'none';
+  document.getElementById('feed-empty').style.display    = 'none';
+  document.getElementById('feed-container').style.display = 'none';
+
+  // Build the URL with any active filters
+  let url = API_BASE + '/api/browse';
+  const params = [];
+  if (currentCategory)     params.push('category='     + encodeURIComponent(currentCategory));
+  if (currentNeighborhood) params.push('neighborhood=' + encodeURIComponent(currentNeighborhood));
+  if (searchQuery)         params.push('search='       + encodeURIComponent(searchQuery));
+  if (params.length)       url += '?' + params.join('&');
+
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('API returned ' + resp.status);
+    const data = await resp.json();
+
+    // ── Rebuild neighborhood pills from live data ──
+    renderNeighborhoodPills(data.neighborhoods || []);
+
+    // ── Render property cards ──
+    if (!data.listings || data.listings.length === 0) {
+      document.getElementById('feed-loading').style.display = 'none';
+      document.getElementById('feed-empty').style.display   = 'block';
+      return;
+    }
+
+    const container = document.getElementById('feed-container');
+    container.innerHTML = data.listings.map(h => buildCard(h)).join('');
+    document.getElementById('feed-loading').style.display   = 'none';
+    document.getElementById('feed-container').style.display = 'flex';
+
+  } catch (err) {
+    console.error('Browse load error:', err);
+    document.getElementById('feed-loading').style.display = 'none';
+    document.getElementById('feed-error').style.display   = 'block';
+  }
+}
+
+// ── Rebuild the neighborhood pill bar from the API response ──
+function renderNeighborhoodPills(neighborhoods) {
+  const scroll = document.getElementById('nbr-scroll');
+  // Always keep "Everywhere" as the first pill
+  let html = `<span class="nbr ${!currentNeighborhood ? 'active' : ''}" role="listitem" onclick="selectNeighborhood(this, null)">Everywhere</span>`;
+  neighborhoods.forEach(nb => {
+    const isActive = currentNeighborhood === nb;
+    html += `<span class="nbr ${isActive ? 'active' : ''}" role="listitem" onclick="selectNeighborhood(this, '${nb}')">${nb}</span>`;
+  });
+  scroll.innerHTML = html;
+}
+
+// ── Build a single property card HTML string from API data ──
+function buildCard(h) {
+  const isCommercial = h.category === 'Commercial';
+  const iconColor    = isCommercial ? '#0F5132' : '#378ADD';
+  const bgColor      = isCommercial ? '#e8f5ee'  : '#f0f4ff';
+  const icon         = isCommercial ? 'ti-building' : 'ti-home';
+
+  // Suitable-for tags (commercial only)
+  let suitableTags = '';
+  if (isCommercial && h.suitable_for) {
+    suitableTags = h.suitable_for.split(',')
+      .map(t => `<span class="suitable-tag">${t.trim()}</span>`)
+      .join('');
+  }
+
+  // Dimensions row (commercial only)
+  const dimsHTML = isCommercial && h.shop_dimensions
+    ? `<span class="meta-item"><i class="ti ti-arrows-diagonal" style="font-size:12px" aria-hidden="true"></i>Size: ${h.shop_dimensions.replace('x','m × ')}m</span>`
+    : '';
+
+  // Expiry note
+  const expiryHTML = h.days_left !== null
+    ? `<span class="expiry-note"><i class="ti ti-clock" style="font-size:11px;vertical-align:-1px" aria-hidden="true"></i> ${h.days_left} days left</span>`
+    : `<span class="expiry-note">Active</span>`;
+
+  // Title: use area + category as the card title
+  const title = isCommercial
+    ? `Commercial space — ${h.neighborhood}`
+    : `Rental — ${h.neighborhood}`;
+
+  return `
+    <article class="prop-card">
+      <div class="prop-img" style="background:${bgColor}">
+        <i class="ti ${icon}" style="font-size:36px;color:${iconColor}" aria-hidden="true"></i>
+        <div class="price-tag">${h.rent_birr.toLocaleString()} ETB/mo</div>
+        <button class="save-btn" aria-label="Save this listing" onclick="toggleSave('${h.id}', this)">
+          <i class="ti ti-heart" style="font-size:15px;color:${savedIds.has(h.id) ? '#e24b4a' : '#6c757d'}" aria-hidden="true"></i>
+        </button>
+      </div>
+      <div class="prop-body">
+        <div class="prop-title">${title}</div>
+        <div class="prop-meta">
+          <span class="meta-item"><i class="ti ti-map-pin" style="font-size:12px" aria-hidden="true"></i>${h.neighborhood}</span>
+          ${dimsHTML}
+        </div>
+        ${suitableTags ? `<div style="margin-top:5px">${suitableTags}</div>` : ''}
+        <div style="font-size:11px;color:#6c757d;margin-top:5px;line-height:1.4">
+          ${h.description.split('\n').slice(0,2).join(' · ')}
+        </div>
+        <div class="unlock-row">
+          ${expiryHTML}
+          <button class="unlock-btn" onclick="initiateUnlock('${h.id}')"
+                  aria-label="Unlock contact for 100 ETB"
+                  data-house-id="${h.id}">
+            <i class="ti ti-lock" style="font-size:12px;vertical-align:-1px;margin-right:3px" aria-hidden="true"></i>Unlock — 100 ETB
+          </button>
+        </div>
+      </div>
+    </article>`;
+}
+
+
+// ════════════════════════════════════════════════════════
+//  FILTER HANDLERS — category pills + neighborhood pills
+// ════════════════════════════════════════════════════════
+
+function filterPill(el) {
+  // Update active style
+  el.closest('.pill-scroll').querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+
+  // Map pill label to API category value
+  const label = el.textContent.trim();
+  if (label.includes('Homes'))       currentCategory = 'Residential';
+  else if (label.includes('Shops') ||
+           label.includes('Cafés') ||
+           label.includes('Pool')  ||
+           label.includes('Salon')) currentCategory = 'Commercial';
+  else                               currentCategory = null;   // "All"
+
+  loadBrowse();
+}
+
+function filterNbr(el) {
+  el.closest('.nbr-scroll').querySelectorAll('.nbr').forEach(n => n.classList.remove('active'));
+  el.classList.add('active');
+  currentNeighborhood = el.textContent.trim() === 'Everywhere' ? null : el.textContent.trim();
+  loadBrowse();
+}
+
+// Called by dynamically rendered pills (they pass the value directly)
+function selectNeighborhood(el, value) {
+  document.querySelectorAll('#nbr-scroll .nbr').forEach(n => n.classList.remove('active'));
+  el.classList.add('active');
+  currentNeighborhood = value;
+  loadBrowse();
+}
+
+
+// ════════════════════════════════════════════════════════
+//  LOGIN — two-step: phone → OTP
+// ════════════════════════════════════════════════════════
+
+// Tracks which step we're on: 'phone' or 'otp'
+let loginStep = 'phone';
+
+// The phone number the user typed (saved between steps)
+let pendingPhone = '';
+
+// Get the selected role (Renter or Landlord)
+function getSelectedRole() {
+  const active = document.querySelector('.role-opt.active');
+  return active ? active.textContent.trim().toLowerCase() : null;
+}
+
+// Called when user taps "Continue"
+async function handleContinue() {
+  if (loginStep === 'phone') {
+    await submitPhone();
+  } else if (loginStep === 'otp') {
+    await submitOtp();
+  } else if (loginStep === 'name') {
+    await submitName();
+  }
+}
+
+// Step 1 — send phone to API to trigger OTP SMS
+async function submitPhone() {
+  const phoneInput = document.getElementById('phone-input');
+  const digits = phoneInput.value.replace(/\D/g, '');
+
+  // Must select a role first
+  if (!getSelectedRole()) {
+    showToast('Please select Renter, Landlord or Admin first 👆');
+    return;
+  }
+
+  // Admin shortcut — no OTP needed, go straight to admin screen
+  if (getSelectedRole() === 'admin') {
+    const adminPass = prompt('Enter admin password:');
+    if (adminPass !== 'Ken@123%mesfin') {
+      showToast('Wrong admin password ❌');
+      return;
+    }
+    resetLoginForm();
+    showScreen('admin', null);
+    return;
+  }
+
+  // Validate: must be 9 digits starting with 9
+  if (digits.length !== 9 || !digits.startsWith('9')) {
+    showToast('Please enter a valid 9-digit Ethiopian number');
+    return;
+  }
+
+  const fullPhone = '0' + digits; // Convert to 09XXXXXXXX format
+  const btn = document.getElementById('continue-btn');
+  const btnText = document.getElementById('continue-btn-text');
+
+  // Show loading state
+  btn.disabled = true;
+  btnText.textContent = 'Sending OTP…';
+
+  try {
+    const res = await fetch(API_BASE + '/api/auth/request-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: fullPhone })
+    });
+    const data = await res.json();
+
+    if (res.ok) {
+      // OTP sent — move to step 2
+      pendingPhone = fullPhone;
+      loginStep = 'otp';
+      document.getElementById('otp-row').style.display = 'block';
+      document.getElementById('phone-input').disabled = true;
+      btnText.textContent = 'Verify OTP';
+      showToast('OTP sent to ' + fullPhone + ' ✅');
+    } else {
+      showToast(data.error || 'Could not send OTP. Try again.');
+    }
+  } catch (err) {
+    showToast('Cannot reach server. Is the API running?');
+  }
+
+  btn.disabled = false;
+  if (loginStep === 'phone') btnText.textContent = 'Continue'; // reset if failed
+}
+
+// Step 2 — verify OTP and get session token
+async function submitOtp() {
+  const otp = document.getElementById('otp-input').value.trim();
+
+  if (otp.length < 4) {
+    showToast('Please enter the full OTP code');
+    return;
+  }
+
+  const role = getSelectedRole();
+  const btn = document.getElementById('continue-btn');
+  const btnText = document.getElementById('continue-btn-text');
+
+  btn.disabled = true;
+  btnText.textContent = 'Verifying…';
+
+  try {
+    const res = await fetch(API_BASE + '/api/auth/verify-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: pendingPhone, otp: otp, role: role })
+    });
+    const data = await res.json();
+
+    if (res.ok) {
+      sessionToken = data.token;
+      localStorage.setItem('betlink_token', data.token);
+
+      const savedName = localStorage.getItem('betlink_name');
+      if (savedName) {
+        // Returning user — skip name step
+        showToast('Welcome back, ' + savedName + '! 👋');
+        resetLoginForm();
+        showScreen('home', null);
+      } else {
+        // New user — ask for name
+        loginStep = 'name';
+        document.getElementById('otp-row').style.display = 'none';
+        document.getElementById('name-row').style.display = 'block';
+        btnText.textContent = 'Finish Setup';
+        btn.disabled = false;
+      }
+    } else {
+      showToast(data.error || 'Wrong OTP. Try again.');
+      btn.disabled = false;
+      btnText.textContent = 'Verify OTP';
+    }
+  } catch (err) {
+    showToast('Cannot reach server. Is the API running?');
+    btn.disabled = false;
+    btnText.textContent = 'Verify OTP';
+  }
+}
+
+function resetLoginForm() {
+  loginStep = 'phone';
+  document.getElementById('phone-input').disabled = false;
+  document.getElementById('phone-input').value = '';
+  document.getElementById('otp-input').value = '';
+  document.getElementById('otp-row').style.display = 'none';
+  document.getElementById('name-row').style.display = 'none';
+  document.getElementById('name-input').value = '';
+  document.getElementById('continue-btn-text').textContent = 'Continue';
+  document.getElementById('continue-btn').disabled = false;
+}
+
+async function submitName() {
+  const name = document.getElementById('name-input').value.trim();
+  if (!name) {
+    showToast('Please enter your name 😊');
+    return;
+  }
+  // Save name to localStorage
+  localStorage.setItem('betlink_name', name);
+  showToast('Welcome to BetLink, ' + name + '! 🎉');
+  resetLoginForm();
+  showScreen('home', null);
+  loadNotifications(); // fetch bell badge on login
+}
+
+
+// ════════════════════════════════════════════════════════
+//  SCREEN ROUTING
+// ════════════════════════════════════════════════════════
+
+function showScreen(name, triggerBtn) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const target = document.getElementById('screen-' + name);
+  if (target) target.classList.add('active');
+
+  if (triggerBtn) {
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    triggerBtn.classList.add('active');
+  }
+
+  // Auto-load browse data whenever the home screen is shown
+  if (name === 'home') { loadBrowse(); updateGreeting(); }
+  if (name === 'profile') { updateGreeting(); loadProfile(); }
+
+  // Auto-load unlocked contacts whenever the unlocked screen is shown
+  if (name === 'unlocked') loadUnlocked();
+  if (name === 'saved') loadSaved();
+  if (name === 'admin') loadAdminQueue();
+  if (name === 'paywall-landlord') {
+    if (!sessionToken) { showToast('Please login first'); showScreen('onboard', null); return; }
+  }
+}
+
+// ════════════════════════════════════════════════════════
+//  NOTIFICATIONS
+// ════════════════════════════════════════════════════════
+
+async function loadNotifications() {
+  if (!sessionToken) return;
+  try {
+    const resp = await fetch(API_BASE + '/api/user/notifications', {
+      headers: { 'Authorization': 'Bearer ' + sessionToken }
+    });
+    if (!resp.ok) return;
+    const data = await resp.json();
+
+    // Update badge visibility on both bells
+    const hasUnread = data.unread_count > 0;
+    ['home', 'profile'].forEach(id => {
+      const badge = document.getElementById('bell-badge-' + id);
+      if (badge) badge.style.display = hasUnread ? 'block' : 'none';
+    });
+
+    // Render notification list
+    const list = document.getElementById('notif-list');
+    if (!list) return;
+    if (!data.notifications || data.notifications.length === 0) {
+      list.innerHTML = '<p style="text-align:center;color:#6c757d;font-size:13px;padding:24px 0">No notifications yet</p>';
+      return;
+    }
+    list.innerHTML = data.notifications.map(n => `
+      <div style="padding:12px 16px;border-bottom:.5px solid rgba(0,0,0,.06);
+                  background:${n.is_read ? '#fff' : '#f0f9f4'}">
+        <div style="font-size:13px;color:#212529;line-height:1.4">${n.message}</div>
+        <div style="font-size:11px;color:#6c757d;margin-top:3px">${n.created_at}</div>
+      </div>
+    `).join('');
+  } catch (err) {
+    console.error('Notifications load error:', err);
+  }
+}
+
+function openNotifPanel() {
+  const panel   = document.getElementById('notif-panel');
+  const overlay = document.getElementById('notif-overlay');
+  panel.style.display   = 'flex';
+  overlay.style.display = 'block';
+  loadNotifications(); // refresh list each time panel opens
+}
+
+function closeNotifPanel() {
+  document.getElementById('notif-panel').style.display   = 'none';
+  document.getElementById('notif-overlay').style.display = 'none';
+}
+
+async function markAllNotifsRead() {
+  if (!sessionToken) return;
+  try {
+    await fetch(API_BASE + '/api/user/notifications/read-all', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + sessionToken }
+    });
+    // Hide all badges
+    ['home', 'profile'].forEach(id => {
+      const badge = document.getElementById('bell-badge-' + id);
+      if (badge) badge.style.display = 'none';
+    });
+    // Re-render list with greyed background
+    await loadNotifications();
+  } catch (err) {
+    console.error('Mark read error:', err);
+  }
+}
+
+
+// ════════════════════════════════════════════════════════
+//  SAVED — heart button + saved screen
+// ════════════════════════════════════════════════════════
+
+// Load saved IDs from localStorage so hearts stay red after refresh
+let savedIds = new Set(JSON.parse(localStorage.getItem('betlink_saved') || '[]'));
+
+function toggleSave(houseId, btn) {
+  if (!sessionToken) {
+    showToast('Please login first to save properties');
+    return;
+  }
+  const icon = btn.querySelector('i');
+  if (savedIds.has(houseId)) {
+    savedIds.delete(houseId);
+    icon.style.color = '#6c757d';
+    showToast('Removed from saved');
+  } else {
+    savedIds.add(houseId);
+    icon.style.color = '#e24b4a';
+    showToast('Saved to favorites ❤️');
+  }
+  // Persist to localStorage
+  localStorage.setItem('betlink_saved', JSON.stringify([...savedIds]));
+}
+
+async function loadSaved() {
+  const feed = document.getElementById('saved-feed');
+  if (!feed) return;
+
+  if (savedIds.size === 0) {
+    feed.innerHTML = `<div class="empty-state">
+      <div class="empty-icon"><i class="ti ti-heart"></i></div>
+      <div class="empty-title">No saved properties yet</div>
+      <div class="empty-sub">Tap the ❤️ on any property to save it here.</div>
+    </div>`;
+    return;
+  }
+
+  feed.innerHTML = `<div style="padding:40px;text-align:center;color:#6c757d;font-size:13px">Loading…</div>`;
+
+  try {
+    const res = await fetch(API_BASE + '/api/browse');
+    const data = await res.json();
+    const saved = (data.listings || []).filter(h => savedIds.has(h.id));
+
+    if (saved.length === 0) {
+      feed.innerHTML = `<div class="empty-state">
+        <div class="empty-icon"><i class="ti ti-heart"></i></div>
+        <div class="empty-title">No saved properties yet</div>
+        <div class="empty-sub">Tap the ❤️ on any property to save it here.</div>
+      </div>`;
+      return;
+    }
+    feed.innerHTML = saved.map(h => buildCard(h)).join('');
+  } catch (err) {
+    feed.innerHTML = `<div class="empty-state">
+      <div class="empty-icon"><i class="ti ti-wifi-off"></i></div>
+      <div class="empty-title">Cannot reach server</div>
+    </div>`;
+  }
+}
+
+
+// ════════════════════════════════════════════════════════
+let searchTimer = null;
+function handleSearch(query) {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => loadBrowse(query.trim()), 400);
+}
+
+function updateGreeting() {
+  const name = localStorage.getItem('betlink_name') || 'there';
+  const phone = localStorage.getItem('betlink_token') ? pendingPhone || '—' : '—';
+
+  // Home screen greeting
+  const greetEl = document.getElementById('greeting-name');
+  if (greetEl) greetEl.textContent = name + ' 👋';
+
+  // Profile screen
+  const profileNameEl = document.getElementById('profile-name');
+  if (profileNameEl) profileNameEl.textContent = name;
+
+  // Avatar initials
+  const avatarEl = document.getElementById('profile-avatar');
+  if (avatarEl) avatarEl.textContent = name.charAt(0).toUpperCase();
+
+  // Stats from localStorage
+  const unlockedEl = document.getElementById('stat-unlocked');
+  if (unlockedEl) unlockedEl.textContent = '—';
+
+  const savedEl = document.getElementById('stat-saved');
+  if (savedEl) savedEl.textContent = savedIds.size;
+
+  // Load real profile from API
+  loadProfile();
+}
+
+async function loadProfile() {
+  if (!sessionToken) return;
+  try {
+    const res = await fetch(API_BASE + '/api/user/profile', {
+      headers: { 'Authorization': 'Bearer ' + sessionToken }
+    });
+    const data = await res.json();
+    if (!res.ok) return;
+
+    // Phone number
+    const phoneEl = document.getElementById('profile-phone');
+    if (phoneEl) phoneEl.innerHTML = `<i class="ti ti-phone" style="font-size:12px;vertical-align:-1px;margin-right:3px"></i>${data.phone || '—'}`;
+
+    // Role
+    const roleEl = document.getElementById('profile-role');
+    if (roleEl) roleEl.textContent = data.role ? data.role.charAt(0).toUpperCase() + data.role.slice(1) : 'Renter';
+
+    // Unlocked count
+    const unlockedEl = document.getElementById('stat-unlocked');
+    if (unlockedEl) unlockedEl.textContent = data.unlocked_count ?? '0';
+
+  } catch (e) {
+    console.log('Profile load error:', e);
+  }
+}
+
+
+function logout() {
+  sessionToken = null;
+  localStorage.removeItem('betlink_token');
+  showToast('Logged out successfully');
+  showScreen('onboard', null);
+}
+
+
+// ════════════════════════════════════════════════════════
+
+async function loadUnlocked() {
+  const feed = document.getElementById('unlocked-feed');
+  if (!feed) return;
+
+  // Must be logged in
+  if (!sessionToken) {
+    feed.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon"><i class="ti ti-lock"></i></div>
+        <div class="empty-title">Login required</div>
+        <div class="empty-sub">Please login first to see your unlocked contacts.</div>
+        <button class="cta-btn" style="margin-top:16px" onclick="showScreen('onboard',null)">Go to Login</button>
+      </div>`;
+    return;
+  }
+
+  // Show loading
+  feed.innerHTML = `<div style="padding:40px;text-align:center;color:#6c757d;font-size:13px">
+    <i class="ti ti-loader" style="font-size:28px;display:block;margin-bottom:8px"></i>Loading your unlocked contacts…</div>`;
+
+  try {
+    const res = await fetch(API_BASE + '/api/user/library', {
+      headers: { 'Authorization': 'Bearer ' + sessionToken }
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      feed.innerHTML = `<div class="empty-state">
+        <div class="empty-icon"><i class="ti ti-alert-circle"></i></div>
+        <div class="empty-title">Could not load</div>
+        <div class="empty-sub">${data.error || 'Something went wrong. Try again.'}</div>
+      </div>`;
+      return;
+    }
+
+    if (!data.listings || data.listings.length === 0) {
+      feed.innerHTML = `<div class="empty-state">
+        <div class="empty-icon"><i class="ti ti-lock-open"></i></div>
+        <div class="empty-title">No unlocked contacts yet</div>
+        <div class="empty-sub">When you unlock a property, the landlord's phone number will appear here.</div>
+      </div>`;
+      return;
+    }
+
+    // Render each unlocked listing
+    feed.innerHTML = data.listings.map(h => {
+      const isCommercial = h.category === 'Commercial';
+      const icon = isCommercial ? 'ti-building' : 'ti-home';
+      const iconBg = isCommercial ? '#fff8e1' : '#e8f5ee';
+      const iconColor = isCommercial ? '#b38a00' : '#0F5132';
+      const title = isCommercial ? `Commercial space — ${h.neighborhood}` : `Rental — ${h.neighborhood}`;
+      const dims = isCommercial && h.shop_dimensions ? ` &nbsp;•&nbsp; ${h.shop_dimensions.replace('x','m × ')}m` : '';
+      const daysLeft = h.days_left !== null ? `valid ${h.days_left} days left` : 'Active';
+
+      return `
+        <div class="contact-card">
+          <div class="contact-icon" style="background:${iconBg}">
+            <i class="ti ${icon}" style="font-size:22px;color:${iconColor}"></i>
+          </div>
+          <div class="contact-body">
+            <div class="contact-title">${title}</div>
+            <div class="contact-meta">
+              <i class="ti ti-map-pin" style="font-size:11px;vertical-align:-1px"></i>
+              ${h.neighborhood} &nbsp;•&nbsp; ${h.rent_birr.toLocaleString()} ETB/mo${dims}
+            </div>
+            <div class="contact-phone">
+              <i class="ti ti-phone" style="font-size:13px"></i>
+              ${h.phone}
+            </div>
+            <div style="font-size:10px;color:#6c757d;margin-top:3px">${daysLeft}</div>
+            <div class="contact-actions">
+              <button class="contact-action-btn btn-call" onclick="showToast('Calling ${h.phone}…')">
+                <i class="ti ti-phone" style="font-size:13px"></i>Call
+              </button>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+
+  } catch (err) {
+    feed.innerHTML = `<div class="empty-state">
+      <div class="empty-icon"><i class="ti ti-wifi-off"></i></div>
+      <div class="empty-title">Cannot reach server</div>
+      <div class="empty-sub">Make sure the API is running and try again.</div>
+    </div>`;
+  }
+}
+
+
+// ════════════════════════════════════════════════════════
+//  TOAST UTILITY
+// ════════════════════════════════════════════════════════
+
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+
+// ════════════════════════════════════════════════════════
+//  PHONE VALIDATION
+// ════════════════════════════════════════════════════════
+
+function validatePhone(input, errId) {
+  const errEl = document.getElementById(errId || 'phone-err');
+  const val = input.value.replace(/\D/g,'');
+  if (val.length > 0 && (val.length !== 9 || !val.startsWith('9'))) {
+    if (errEl) errEl.classList.add('show');
+    input.style.borderColor = '#e24b4a';
+  } else {
+    if (errEl) errEl.classList.remove('show');
+    input.style.borderColor = val.length === 9 ? '#0F5132' : '';
+  }
+}
+
+
+// ════════════════════════════════════════════════════════
+//  ROLE SELECTOR (login screen)
+// ════════════════════════════════════════════════════════
+
+function selectRole(btn, role) {
+  btn.parentElement.querySelectorAll('.role-opt').forEach(b => {
+    b.classList.remove('active');
+    b.setAttribute('aria-pressed','false');
+  });
+  btn.classList.add('active');
+  btn.setAttribute('aria-pressed','true');
+}
+
+
+// ════════════════════════════════════════════════════════
+//  PAYMENT UI (unchanged — still simulated until login done)
+// ════════════════════════════════════════════════════════
+
+function toggleManual(type) {
+  const box  = document.getElementById('manual-' + type);
+  const btn  = document.getElementById('manual-toggle-' + type);
+  const open = box.classList.contains('show');
+  box.classList.toggle('show', !open);
+  btn.setAttribute('aria-expanded', String(!open));
+}
+
+
+
+
+// ════════════════════════════════════════════════════════
+//  PAYMENT — Chapa + Manual
+// ════════════════════════════════════════════════════════
+
+// Stores the house ID the user is trying to unlock
+let currentHouseId = null;
+
+// Stores the uploaded receipt as base64
+let receiptBase64 = null;
+
+// Called when user clicks "Unlock — 100 ETB" on a property card
+function initiateUnlock(houseId) {
+  currentHouseId = houseId;
+  receiptBase64 = null;
+  showScreen('paywall-renter', null);
+}
+
+// Flow A — Chapa instant payment
+async function startChapaPayment() {
+  if (!sessionToken) {
+    showToast('Please login first');
+    showScreen('onboard', null);
+    return;
+  }
+
+  const step = document.getElementById('chapa-renter-step');
+  step.classList.add('show');
+  step.querySelector('.step-body').innerHTML =
+    'Contacting Chapa… <span class="verify-badge verify-pending"><i class="ti ti-clock" style="font-size:11px"></i> Please wait…</span>';
+
+  try {
+    const res = await fetch(API_BASE + '/api/pay/chapa/initiate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + sessionToken
+      },
+      body: JSON.stringify({
+        payment_type: 'unlock',
+        house_id: currentHouseId
+      })
+    });
+    const data = await res.json();
+
+    if (res.ok && data.checkout_url) {
+      step.querySelector('.step-body').innerHTML =
+        'Redirecting to Chapa checkout… <span class="verify-badge verify-ok"><i class="ti ti-check" style="font-size:11px"></i> Opening…</span>';
+      // Open Chapa checkout in new tab
+      window.open(data.checkout_url, '_blank');
+      showToast('Complete payment in the Chapa tab that opened 🔗');
+    } else {
+      step.querySelector('.step-body').innerHTML =
+        '<span class="verify-badge" style="background:#fef2f2;color:#991b1b">❌ ' + (data.error || 'Chapa unavailable. Try manual payment.') + '</span>';
+    }
+  } catch (err) {
+    step.querySelector('.step-body').innerHTML =
+      '<span class="verify-badge" style="background:#fef2f2;color:#991b1b">❌ Cannot reach server. Try manual payment.</span>';
+  }
+}
+
+// Flow B — Handle receipt image upload
+function handleReceiptUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const label = document.getElementById('upload-label-renter');
+  label.textContent = '✅ ' + file.name + ' selected';
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    receiptBase64 = e.target.result.split(',')[1]; // strip the data:image/...;base64, prefix
+  };
+  reader.readAsDataURL(file);
+}
+
+// Flow B — Submit manual payment receipt
+async function submitManualPayment() {
+  if (!sessionToken) {
+    showToast('Please login first');
+    showScreen('onboard', null);
+    return;
+  }
+
+  if (!receiptBase64) {
+    showToast('Please upload your receipt screenshot first 📷');
+    return;
+  }
+
+  const btn = document.getElementById('submit-manual-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader" style="font-size:16px"></i> Submitting…';
+
+  try {
+    const txRef = 'manual_unlock_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+
+    const res = await fetch(API_BASE + '/api/pay/verify', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + sessionToken
+      },
+      body: JSON.stringify({
+        method: 'manual',
+        payment_type: 'unlock',
+        house_id: currentHouseId,
+        screenshot: receiptBase64,
+        tx_ref: txRef
+      })
+    });
+    const data = await res.json();
+
+    if (res.ok) {
+      showToast('Receipt submitted! Admin will review within a few hours ✅');
+      showScreen('home', null);
+    } else {
+      showToast(data.error || 'Submission failed. Try again.');
+    }
+  } catch (err) {
+    showToast('Cannot reach server. Is the API running?');
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '<i class="ti ti-send" style="font-size:16px"></i> Submit receipt for review';
+}
+
+
+// ════════════════════════════════════════════════════════
+//  LANDLORD FORM HELPERS
+// ════════════════════════════════════════════════════════
+
+function toggleChip(chip) {
+  chip.classList.toggle('chosen');
+}
+
+function handleCategoryChange(val) {
+  const dimRow      = document.getElementById('dim-row');
+  const suitableRow = document.getElementById('suitable-row');
+  const show = val === 'commercial';
+  dimRow.style.display      = show ? 'block' : 'none';
+  suitableRow.style.display = show ? 'block' : 'none';
+}
+
+
+// ════════════════════════════════════════════════════════
+//  ADMIN PANEL
+// ════════════════════════════════════════════════════════
+
+const ADMIN_KEY = 'Ken@123%mesfin';
+let pendingCount = 0;
+
+async function loadAdminQueue() {
+  const feed = document.querySelector('.admin-feed');
+  if (!feed) return;
+  feed.innerHTML = '<p style="text-align:center;color:#888;padding:30px">Loading queue…</p>';
+
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/queue`, {
+      headers: { 'X-Admin-Key': ADMIN_KEY }
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      feed.innerHTML = '<p style="text-align:center;color:red;padding:30px">Could not load queue.</p>';
+      return;
+    }
+
+    pendingCount = data.count;
+    const countEl = document.getElementById('pending-count');
+    if (countEl) {
+      if (pendingCount === 0) {
+        countEl.textContent = 'All clear ✓';
+        countEl.style.background = '#e8f5ee';
+        countEl.style.color = '#0a3d24';
+      } else {
+        countEl.textContent = pendingCount + ' pending';
+        countEl.style.background = '#FFC107';
+        countEl.style.color = '#7a5800';
+      }
+    }
+
+    if (data.pending.length === 0) {
+      feed.innerHTML = '<p style="text-align:center;color:#888;padding:40px">No pending payments 🎉</p>';
+      return;
+    }
+
+    feed.innerHTML = '';
+    data.pending.forEach(p => {
+      const isRenter = p.payment_type === 'unlock';
+      const role = isRenter ? 'renter' : 'landlord';
+      const cardId = 'admin-card-' + p.id;
+      const timeAgo = formatTimeAgo(p.submitted_at);
+
+      const card = document.createElement('div');
+      card.className = 'admin-card';
+      card.id = cardId;
+      card.innerHTML = `
+        <div class="admin-card-header">
+          <span><i class="ti ${isRenter ? 'ti-building-bank' : 'ti-home'}" style="font-size:13px;vertical-align:-1px;margin-right:4px"></i>${isRenter ? 'Manual payment — renter unlock' : 'New listing — landlord post'}</span>
+          <span class="admin-badge badge-manual">Manual</span>
+        </div>
+        <div class="proof-row">
+          <div class="proof-thumb" onclick="viewProof('${p.tx_ref}')" title="Click to view proof" role="button" tabindex="0" style="cursor:pointer">
+            <i class="ti ti-file-invoice" style="font-size:28px;color:#0F5132"></i>
+            <span class="proof-thumb-label">${p.has_screenshot ? 'View proof' : 'No proof'}</span>
+          </div>
+          <div class="proof-meta">
+            <div class="meta-row">
+              <span class="meta-key">User ID</span>
+              <span class="meta-val">${p.app_user_id}</span>
+            </div>
+            ${p.house_id ? `<div class="meta-row"><span class="meta-key">House ID</span><span class="meta-val">${p.house_id}</span></div>` : ''}
+            <div class="meta-row">
+              <span class="meta-key">Fee</span>
+              <span class="meta-val" style="color:#0F5132;font-weight:500">${p.amount_birr} ETB</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-key">Type</span>
+              <span class="meta-val">${isRenter ? 'Unlock fee' : 'Listing fee'}</span>
+            </div>
+            <div class="meta-row" style="border-bottom:none">
+              <span class="meta-key">Submitted</span>
+              <span class="meta-val">${timeAgo}</span>
+            </div>
+          </div>
+        </div>
+        <div class="admin-actions">
+          <button class="action-approve" onclick="adminAction('${cardId}','approved','${role}','${p.tx_ref}')" aria-label="Approve">
+            <i class="ti ti-check" style="font-size:14px"></i>✅ Approve
+          </button>
+          <button class="action-reject" onclick="adminAction('${cardId}','rejected','${role}','${p.tx_ref}')" aria-label="Reject">
+            <i class="ti ti-x" style="font-size:14px"></i>❌ Reject
+          </button>
+        </div>
+      `;
+      feed.appendChild(card);
+    });
+
+  } catch (e) {
+    feed.innerHTML = '<p style="text-align:center;color:red;padding:30px">Network error — is the API running?</p>';
+  }
+}
+
+function formatTimeAgo(isoString) {
+  if (!isoString) return 'Unknown';
+  const diff = Math.floor((Date.now() - new Date(isoString + 'Z').getTime()) / 1000);
+  if (diff < 60) return diff + ' sec ago';
+  if (diff < 3600) return Math.floor(diff / 60) + ' min ago';
+  if (diff < 86400) return Math.floor(diff / 3600) + ' hr ago';
+  return Math.floor(diff / 86400) + ' days ago';
+}
+
+function viewProof(txRef) {
+  showToast('Proof ref: ' + txRef);
+}
+
+async function adminAction(cardId, decision, role, txRef) {
+  const card = document.getElementById(cardId);
+  const btns = card.querySelector('.admin-actions');
+  btns.innerHTML = '<span style="color:#888;font-size:12px;padding:8px">Processing…</span>';
+
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/manual-payment/action`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-Key': ADMIN_KEY
+      },
+      body: JSON.stringify({ tx_ref: txRef, action: decision === 'approved' ? 'approve' : 'reject' })
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      showToast('Error: ' + (data.error || 'Something went wrong'));
+      loadAdminQueue();
+      return;
+    }
+
+    const msg = decision === 'approved'
+      ? (role === 'renter' ? '✅ Unlock approved — contact revealed to renter' : '✅ Listing approved — published for 30 days')
+      : (role === 'renter' ? '❌ Proof rejected — renter notified' : '❌ Listing rejected — landlord notified');
+
+    card.classList.add('resolved');
+    btns.innerHTML = '';
+    const banner = document.createElement('div');
+    banner.className = 'resolved-banner';
+    banner.textContent = msg;
+    card.appendChild(banner);
+
+    pendingCount = Math.max(0, pendingCount - 1);
+    const countEl = document.getElementById('pending-count');
+    if (countEl) {
+      if (pendingCount === 0) {
+        countEl.textContent = 'All clear ✓';
+        countEl.style.background = '#e8f5ee';
+        countEl.style.color = '#0a3d24';
+      } else {
+        countEl.textContent = pendingCount + ' pending';
+      }
+    }
+    showToast(msg);
+
+  } catch (e) {
+    showToast('Network error — try again');
+    loadAdminQueue();
+  }
+}
+
+// ── Admin tab switcher ──────────────────────────────────────
+function switchAdminTab(tab) {
+  // Update nav active state
+  ['queue','listings','users','reports'].forEach(t => {
+    document.getElementById('admin-nav-' + t)?.classList.toggle('active', t === tab);
+  });
+
+  // Show/hide the feed vs sub-views
+  const feed = document.querySelector('.admin-feed');
+  const views = ['listings','users','reports'];
+  if (tab === 'queue') {
+    feed.style.display = '';
+    views.forEach(v => { const el = document.getElementById('admin-view-' + v); if(el) el.style.display = 'none'; });
+    loadAdminQueue();
+  } else {
+    feed.style.display = 'none';
+    views.forEach(v => {
+      const el = document.getElementById('admin-view-' + v);
+      if (el) el.style.display = v === tab ? '' : 'none';
+    });
+    if (tab === 'listings') loadAdminListings();
+    if (tab === 'users')    loadAdminUsers();
+    if (tab === 'reports')  loadAdminReports();
+  }
+}
+
+// ── Admin: load all listings ────────────────────────────────
+async function loadAdminListings() {
+  const body = document.getElementById('admin-listings-body');
+  body.innerHTML = '<i class="ti ti-loader" style="font-size:32px;color:#0F5132"></i><br>Loading…';
+  try {
+    const res = await fetch(`${API_BASE}/api/browse?limit=50`, { headers: { 'X-Admin-Key': ADMIN_KEY } });
+    const data = await res.json();
+    const houses = data.houses || [];
+    if (!houses.length) { body.innerHTML = '<p style="color:#6c757d">No listings found.</p>'; return; }
+    body.innerHTML = houses.map(h => `
+      <div style="background:#fff;border-radius:10px;border:.5px solid var(--border);padding:12px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <strong style="font-size:13px">${h.neighborhood || h.area}</strong>
+          <span style="font-size:11px;padding:2px 8px;border-radius:8px;background:${h.status==='active'?'#e8f5ee':'#fff8e1'};color:${h.status==='active'?'#0F5132':'#b38a00'}">${h.status}</span>
+        </div>
+        <div style="font-size:12px;color:#6c757d;margin-top:4px">${h.category} · ${Number(h.rent_birr).toLocaleString()} ETB/mo</div>
+        <div style="font-size:11px;color:#aaa;margin-top:2px">ID: ${h.id}</div>
+      </div>`).join('');
+  } catch(e) { body.innerHTML = '<p style="color:#e24b4a">Failed to load listings.</p>'; }
+}
+
+// ── Admin: load all users ───────────────────────────────────
+async function loadAdminUsers() {
+  const body = document.getElementById('admin-users-body');
+  body.innerHTML = '<i class="ti ti-loader" style="font-size:32px;color:#0F5132"></i><br>Loading…';
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/users`, { headers: { 'X-Admin-Key': ADMIN_KEY } });
+    const data = await res.json();
+    const users = data.users || [];
+    if (!users.length) { body.innerHTML = '<p style="color:#6c757d">No users yet.</p>'; return; }
+    body.innerHTML = users.map(u => `
+      <div style="background:#fff;border-radius:10px;border:.5px solid var(--border);padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:13px;font-weight:500">${u.phone}</div>
+          <div style="font-size:11px;color:#6c757d">Joined: ${u.created_at?.slice(0,10)}</div>
+        </div>
+        <span style="font-size:11px;padding:2px 8px;border-radius:8px;background:#e8f5ee;color:#0F5132">${u.role}</span>
+      </div>`).join('');
+  } catch(e) { body.innerHTML = '<p style="color:#e24b4a">Failed to load users.</p>'; }
+}
+
+// ── Admin: reports summary ──────────────────────────────────
+async function loadAdminReports() {
+  try {
+    const [health, queue] = await Promise.all([
+      fetch(`${API_BASE}/api/health`).then(r => r.json()),
+      fetch(`${API_BASE}/api/admin/queue`, { headers: { 'X-Admin-Key': ADMIN_KEY } }).then(r => r.json())
+    ]);
+    document.getElementById('rpt-listings').textContent = health.active_listings ?? '—';
+    document.getElementById('rpt-pending').textContent  = (queue.payments || []).length;
+    // Users count comes from admin/users if available
+    const ur = await fetch(`${API_BASE}/api/admin/users`, { headers: { 'X-Admin-Key': ADMIN_KEY } });
+    const ud = await ur.json();
+    document.getElementById('rpt-users').textContent = (ud.users || []).length;
+  } catch(e) { showToast('Could not load report data'); }
+}
+
+// ── Admin settings modal ────────────────────────────────────
+function showAdminSettings() {
+  showToast('⚙️ Admin Settings — coming soon');
+}
+
+// ════════════════════════════════════════════════════════
+//  STARTUP — splash then go to login or home
+// ════════════════════════════════════════════════════════
+setTimeout(() => {
+  try {
+    if (sessionToken) {
+      showScreen('home', null);
+      updateGreeting();
+    } else {
+      showScreen('onboard', null);
+    }
+    loadBrowse();
+  } catch(e) {
+    console.error('Startup error:', e);
+    showScreen('onboard', null);
+  }
+}, 1500);
+
+// ════════════════════════════════════════════════════════
+//  PWA — Register service worker for installability
+// ════════════════════════════════════════════════════════
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js')
+    .then(() => console.log('BetLink SW registered'))
+    .catch(e => console.log('SW error:', e));
+}
+
+// ════════════════════════════════════════════════════════
+//  LANDLORD LISTING — Form validation + API submission
+// ════════════════════════════════════════════════════════
+
+let landlordReceiptBase64 = null;
+let propertyPhotosBase64  = [];   // Array of base64 strings (max 5)
+
+// ── Property photo picker ──
+function handlePropertyPhotos(input) {
+  const files = Array.from(input.files).slice(0, 5);
+  if (!files.length) return;
+
+  // If already have photos, append up to the 5-photo limit
+  const remaining = 5 - propertyPhotosBase64.length;
+  const toRead = files.slice(0, remaining);
+
+  if (toRead.length === 0) {
+    showToast('Maximum 5 photos allowed 📸');
+    return;
+  }
+
+  let loaded = 0;
+  toRead.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      propertyPhotosBase64.push(e.target.result.split(',')[1]);
+      loaded++;
+      if (loaded === toRead.length) renderPhotoThumbs();
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // Reset input so same file can be re-selected if needed
+  input.value = '';
+}
+
+function renderPhotoThumbs() {
+  const thumbsEl  = document.getElementById('photo-thumbs');
+  const labelEl   = document.getElementById('photo-upload-label');
+  const uploadBox = document.getElementById('photo-upload-box');
+  const count     = propertyPhotosBase64.length;
+
+  // Update label
+  labelEl.textContent = count + ' photo' + (count === 1 ? '' : 's') + ' selected ✅';
+
+  // Build thumbnails
+  thumbsEl.style.display = 'flex';
+  thumbsEl.innerHTML = '';
+  propertyPhotosBase64.forEach((b64, idx) => {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'position:relative;width:60px;height:60px;flex-shrink:0';
+
+    const img = document.createElement('img');
+    img.src = 'data:image/jpeg;base64,' + b64;
+    img.style.cssText = 'width:60px;height:60px;object-fit:cover;border-radius:8px;border:1.5px solid rgba(0,0,0,.12)';
+    img.alt = 'Property photo ' + (idx + 1);
+
+    const del = document.createElement('button');
+    del.innerHTML = '×';
+    del.title = 'Remove photo';
+    del.style.cssText = 'position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:#e24b4a;color:#fff;border:none;cursor:pointer;font-size:12px;line-height:18px;text-align:center;padding:0';
+    del.onclick = function(ev) {
+      ev.stopPropagation();
+      propertyPhotosBase64.splice(idx, 1);
+      renderPhotoThumbs();
+    };
+
+    wrap.appendChild(img);
+    wrap.appendChild(del);
+    thumbsEl.appendChild(wrap);
+  });
+
+  // Add-more button if under limit
+  if (count < 5) {
+    const addMore = document.createElement('div');
+    addMore.style.cssText = 'width:60px;height:60px;border:1.5px dashed #0F5132;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#0F5132;font-size:22px;flex-shrink:0';
+    addMore.innerHTML = '+';
+    addMore.title = 'Add more photos';
+    addMore.onclick = function() { document.getElementById('photo-file-input').click(); };
+    thumbsEl.appendChild(addMore);
+  }
+
+  // Hide main upload box once photos exist
+  uploadBox.style.display = count > 0 ? 'none' : '';
+}
+
+// ── Collect and validate all form fields ──
+// Returns a data object or null if invalid.
+function collectLandlordForm() {
+  const category     = document.getElementById('cat-select').value;
+  const neighborhood = document.getElementById('nbr-input').value.trim();
+  const rentRaw      = document.getElementById('rent-input').value.trim();
+  const phoneRaw     = document.getElementById('ll-phone').value.trim();
+  const desc         = document.getElementById('desc-input').value.trim();
+  const dimW         = document.getElementById('dim-w').value.trim();
+  const dimH         = document.getElementById('dim-h').value.trim();
+
+  if (!category) {
+    showToast('Please select a category (Residential or Commercial) 🏠');
+    return null;
+  }
+  if (!neighborhood) {
+    showToast('Please enter a neighborhood or area 📍');
+    return null;
+  }
+  if (!rentRaw || isNaN(rentRaw) || parseInt(rentRaw) < 100) {
+    showToast('Please enter a valid monthly rent amount 💰');
+    return null;
+  }
+  if (!phoneRaw || phoneRaw.length !== 9 || !/^[97]/.test(phoneRaw)) {
+    showToast('Please enter a valid 9-digit Ethiopian phone number 📞');
+    return null;
+  }
+  if (!desc) {
+    showToast('Please add a short description of the property ✏️');
+    return null;
+  }
+
+  let shopDimensions = null;
+  let suitableFor    = null;
+
+  if (category === 'commercial') {
+    if (!dimW || !dimH || isNaN(dimW) || isNaN(dimH)) {
+      showToast('Please enter the shop width and length for commercial listings 📐');
+      return null;
+    }
+    shopDimensions = dimW + 'x' + dimH;
+
+    const chips = document.querySelectorAll('.suit-chip.chosen');
+    if (chips.length === 0) {
+      showToast('Please select at least one business type for commercial listings 🏪');
+      return null;
+    }
+    suitableFor = Array.from(chips).map(c => c.dataset.val).join(', ');
+  }
+
+  return {
+    category:        category === 'residential' ? 'Residential' : 'Commercial',
+    neighborhood,
+    rent_birr:       parseInt(rentRaw),
+    phone:           '+251' + phoneRaw,
+    description:     desc,
+    shop_dimensions: shopDimensions,
+    suitable_for:    suitableFor,
+    photos:          propertyPhotosBase64,   // array of base64 strings (may be empty)
+  };
+}
+
+// ── Reset all landlord form fields ──
+function resetLandlordForm() {
+  document.getElementById('cat-select').value = '';
+  document.getElementById('nbr-input').value  = '';
+  document.getElementById('rent-input').value = '';
+  document.getElementById('ll-phone').value   = '';
+  document.getElementById('desc-input').value = '';
+  document.getElementById('dim-w').value      = '';
+  document.getElementById('dim-h').value      = '';
+  document.querySelectorAll('.suit-chip.chosen').forEach(c => c.classList.remove('chosen'));
+  document.getElementById('landlord-upload-label').textContent = '⚠️ Upload payment receipt screenshot/photo here';
+  landlordReceiptBase64 = null;
+
+  // Reset photos
+  propertyPhotosBase64 = [];
+  const thumbsEl  = document.getElementById('photo-thumbs');
+  const uploadBox = document.getElementById('photo-upload-box');
+  if (thumbsEl)  { thumbsEl.innerHTML = ''; thumbsEl.style.display = 'none'; }
+  if (uploadBox) { uploadBox.style.display = ''; }
+  document.getElementById('photo-upload-label').textContent = 'Add photos of your property';
+
+  handleCategoryChange('');
+}
+
+// ── Chapa flow for landlord ──
+async function startLandlordChapaPayment() {
+  if (!sessionToken) {
+    showToast('Please login first');
+    showScreen('onboard', null);
+    return;
+  }
+
+  const listingData = collectLandlordForm();
+  if (!listingData) return;  // validation failed — toast already shown
+
+  const step = document.getElementById('chapa-landlord-step');
+  step.classList.add('show');
+  step.querySelector('.step-body').innerHTML =
+    'Saving listing draft… <span class="verify-badge verify-pending"><i class="ti ti-clock" style="font-size:11px"></i> Please wait…</span>';
+
+  try {
+    // Step 1: Save listing draft to API
+    const draftRes = await fetch(API_BASE + '/api/listings/draft', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + sessionToken
+      },
+      body: JSON.stringify(listingData)
+    });
+
+    if (!draftRes.ok) {
+      let errMsg = 'Could not save listing. Try again.';
+      try { const d = await draftRes.json(); errMsg = d.error || errMsg; } catch(e) {}
+      step.querySelector('.step-body').innerHTML =
+        '<span class="verify-badge" style="background:#fef2f2;color:#991b1b">❌ ' + errMsg + '</span>';
+      return;
+    }
+
+    step.querySelector('.step-body').innerHTML =
+      'Contacting Chapa… <span class="verify-badge verify-pending"><i class="ti ti-clock" style="font-size:11px"></i> Please wait…</span>';
+
+    // Step 2: Initiate Chapa payment
+    const res = await fetch(API_BASE + '/api/pay/chapa/initiate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + sessionToken
+      },
+      body: JSON.stringify({ payment_type: 'listing' })
+    });
+    const data = await res.json();
+
+    if (res.ok && data.checkout_url) {
+      step.querySelector('.step-body').innerHTML =
+        'Redirecting to Chapa checkout… <span class="verify-badge verify-ok"><i class="ti ti-check" style="font-size:11px"></i> Opening…</span>';
+      window.open(data.checkout_url, '_blank');
+      showToast('Complete the 200 ETB payment in the Chapa tab 🔗');
+    } else {
+      // Chapa key not set up yet — give a clear helpful message
+      const msg = (data.error && data.error.includes('key')) || !data.checkout_url
+        ? 'Chapa is not set up yet — please use Manual Bank Transfer below 👇'
+        : (data.error || 'Chapa unavailable. Please use Manual Bank Transfer below 👇');
+      step.querySelector('.step-body').innerHTML =
+        '<span class="verify-badge" style="background:#fff8e1;color:#92600a">⚠️ ' + msg + '</span>';
+    }
+  } catch (err) {
+    step.querySelector('.step-body').innerHTML =
+      '<span class="verify-badge" style="background:#fef2f2;color:#991b1b">❌ API server is offline — start <code>python betlink_api.py</code> then try again, or use Manual Bank Transfer below 👇</span>';
+  }
+}
+
+// ── Receipt upload for landlord manual payment ──
+function handleLandlordReceiptUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const label = document.getElementById('landlord-upload-label');
+  label.textContent = '✅ ' + file.name + ' selected';
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    landlordReceiptBase64 = e.target.result.split(',')[1];
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── Manual payment submit for landlord ──
+async function submitLandlordManual() {
+  if (!sessionToken) {
+    showToast('Please login first');
+    showScreen('onboard', null);
+    return;
+  }
+
+  const listingData = collectLandlordForm();
+  if (!listingData) return;
+
+  if (!landlordReceiptBase64) {
+    showToast('Please upload your payment receipt screenshot first 📷');
+    return;
+  }
+
+  const btn = document.getElementById('submit-landlord-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader" style="font-size:16px"></i> Submitting…';
+
+  try {
+    // Step 1: Save listing draft
+    const draftRes = await fetch(API_BASE + '/api/listings/draft', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + sessionToken
+      },
+      body: JSON.stringify(listingData)
+    });
+
+    if (!draftRes.ok) {
+      let errMsg = 'Could not save listing draft. Try again.';
+      try { const d = await draftRes.json(); errMsg = d.error || errMsg; } catch(e) {}
+      showToast(errMsg);
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ti ti-send" style="font-size:16px"></i> Submit listing for review';
+      return;
+    }
+
+    const draftData = await draftRes.json();
+
+    // Step 2: Submit manual payment with receipt
+    const txRef = 'manual_listing_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+
+    const res = await fetch(API_BASE + '/api/pay/verify', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + sessionToken
+      },
+      body: JSON.stringify({
+        method:       'manual',
+        payment_type: 'listing',
+        house_id:     draftData.house_id,
+        screenshot:   landlordReceiptBase64,
+        tx_ref:       txRef
+      })
+    });
+    const data = await res.json();
+
+    if (res.ok || res.status === 202) {
+      showToast('Listing submitted! Admin will review and publish it within a few hours ✅');
+      resetLandlordForm();
+      showScreen('home', null);
+    } else {
+      showToast(data.error || 'Submission failed. Try again.');
+    }
+  } catch (err) {
+    showToast('❌ API server is offline. Make sure you ran: python betlink_api.py');
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '<i class="ti ti-send" style="font-size:16px"></i> Submit listing for review';
+}
+
+
+</script>
+</body>
+</html>
