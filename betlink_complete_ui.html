@@ -1403,11 +1403,11 @@ async function submitOtp() {
 
   try {
           // TEST BYPASS — remove before launch
-      if (otp === '123456') {
-          currentUser = { phone: pendingPhone, role: 'renter' };
-          showScreen('home', null);
-          return;
-  }
+     if (otp === '123456') {
+  currentUser = { phone: pendingPhone, role: 'renter' };
+  setTimeout(() => showScreen('home', null), 100);
+  return;
+}
     const res = await fetch(API_BASE + '/api/auth/verify-otp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
