@@ -262,17 +262,20 @@ def auth_verify_otp():
     if not phone:
         return jsonify({"error": "Invalid phone number"}), 400
 
-    stored = _otp_store.get(phone)
-    if not stored:
-        return jsonify({"error": "No OTP requested for this number"}), 401
-    if time.time() > stored["expires"]:
+    # TEST BYPASS — "123456" works for any phone, no stored OTP needed.
+    # Remove this block before real launch.
+    if otp_submitted == "123456":
+        _otp_store.pop(phone, None)
+    else:
+        stored = _otp_store.get(phone)
+        if not stored:
+            return jsonify({"error": "No OTP requested for this number"}), 401
+        if time.time() > stored["expires"]:
+            del _otp_store[phone]
+            return jsonify({"error": "OTP expired. Request a new one."}), 401
+        if stored["otp"] != otp_submitted:
+            return jsonify({"error": "Incorrect OTP"}), 401
         del _otp_store[phone]
-        return jsonify({"error": "OTP expired. Request a new one."}), 401
-    if stored["otp"] != otp_submitted:
-        return jsonify({"error": "Incorrect OTP"}), 401
-
-    # OTP valid — clear it (single-use)
-    del _otp_store[phone]
 
     # Upsert app_users
     db = get_db()
