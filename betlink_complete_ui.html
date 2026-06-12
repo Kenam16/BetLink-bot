@@ -1401,7 +1401,13 @@ async function submitOtp() {
   try {
           // TEST BYPASS — remove before launch
      if (otp === '123456') {
-  currentUser = { phone: pendingPhone, role: 'renter' };
+  currentUser = { 
+    phone: pendingPhone, 
+    role: 'renter',
+    name: 'Test User',
+    id: 1,
+    token: 'test-token'
+  };
   setTimeout(() => showScreen('home', null), 100);
   return;
 }
