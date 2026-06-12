@@ -1028,8 +1028,39 @@ def health():
 #  ENTRY POINT
 # ─────────────────────────────────────────────────────────────
 
+def _seed_test_session() -> None:
+    """
+    Matches the frontend's OTP test bypass (otp === '123456' -> token 'test-token').
+    Without this, /api/pay/verify and other authenticated routes reject
+    'test-token' with "Invalid or expired session token".
+    Safe to leave in for now; remove this function (and its call below)
+    before real launch.
+    """
+    db = sqlite3.connect(DB_PATH)
+    db.execute("PRAGMA journal_mode = WAL;")
+    db.execute(
+        "INSERT OR IGNORE INTO app_users (phone, role) VALUES (?, ?)",
+        ("0900000000", "renter"),
+    )
+    db.commit()
+    row = db.execute(
+        "SELECT id, phone, role FROM app_users WHERE phone = ?", ("0900000000",)
+    ).fetchone()
+    db.close()
+
+    _sessions["test-token"] = {
+        "app_user_id": row[0],
+        "phone":       row[1],
+        "role":        row[2],
+    }
+    log.info("Seeded OTP test-bypass session (test-token -> app_user_id=%s)", row[0])
+
+
+_ensure_app_tables()   # Safe: only adds new tables, never touches bot tables
+_seed_test_session()
+
+
 if __name__ == "__main__":
-    _ensure_app_tables()   # Safe: only adds new tables, never touches bot tables
     log.info("BetLink API starting on port 5000 …")
     app.run(
         host="0.0.0.0",
