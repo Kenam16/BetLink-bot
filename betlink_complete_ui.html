@@ -120,8 +120,9 @@ body{background:#F8F9FA;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
 .unlock-btn{padding:5px 12px;background:#FFC107;color:#7a5800;border:none;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer}
 .expiry-note{font-size:10px;color:#6c757d}
 
+
 /* ── Bottom nav ───────────────────────────────────────────── */
-.bottom-nav{background:#fff;border-top:.5px solid var(--border);display:flex;justify-content:space-around;padding:8px 0 10px}
+.bottom-nav{background:#fff;border-top:.5px solid var(--border);display:flex;justify-content:space-around;padding:8px 0 10px;position:fixed;bottom:0;left:0;right:0;z-index:100}
 .nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:0 6px}
 .nav-item span{font-size:10px;color:#6c757d}
 .nav-item.active span{color:#0F5132}
@@ -129,7 +130,7 @@ body{background:#F8F9FA;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
 .nav-item.active i{color:#0F5132}
 
 /* ── Scrollable body ──────────────────────────────────────── */
-.screen-body{max-height:480px;overflow-y:auto;background:#F8F9FA}
+.screen-body{flex:1;overflow-y:auto;background:#F8F9FA;padding-bottom:70px}
 .screen-body::-webkit-scrollbar{display:none}
 
 /* ── Forms ────────────────────────────────────────────────── */
