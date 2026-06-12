@@ -1463,7 +1463,8 @@ function resetLoginForm() {
   document.getElementById('phone-input').value = '';
   document.getElementById('otp-input').value = '';
   document.getElementById('otp-row').style.display = 'none';
-  document.getElementById('name-row').style.display = 'none';
+  const nameRow = document.getElementById('name-row');
+  if (nameRow) nameRow.style.display = 'none';
   document.getElementById('name-input').value = '';
   document.getElementById('continue-btn-text').textContent = 'Continue';
   document.getElementById('continue-btn').disabled = false;
@@ -1707,10 +1708,12 @@ async function loadProfile() {
   }
 }
 
-
 function logout() {
   sessionToken = null;
+  currentUser = null;
   localStorage.removeItem('betlink_token');
+  localStorage.removeItem('betlink_name');
+  resetLoginForm();
   showToast('Logged out successfully');
   showScreen('onboard', null);
 }
