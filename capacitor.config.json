@@ -1,0 +1,9 @@
+{
+  "appId": "com.betlink.app",
+  "appName": "BetLink",
+  "webDir": "www",
+  "server": {
+    "url": "https://deluxe-medovik-ca6b5f.netlify.app/betlink_complete_ui.html",
+    "cleartext": true
+  }
+}
