@@ -134,7 +134,7 @@ body{background:#F8F9FA;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
 .screen-body::-webkit-scrollbar{display:none}
 
 /* ── Forms ────────────────────────────────────────────────── */
-.form-section{padding:16px}
+.form-section{padding:16px;flex:1;overflow-y:auto}
 .form-label{font-size:12px;color:#6c757d;margin:0 0 5px;font-weight:500;display:block}
 .form-input{width:100%;padding:9px 12px;border-radius:8px;border:.5px solid var(--border);background:#fff;font-size:13px;color:#212529}
 .form-input:focus{outline:none;border-color:#0F5132}
@@ -257,7 +257,7 @@ body{background:#F8F9FA;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 /* ── Empty state ──────────────────────────────────────────── */
-.empty-state{padding:40px 24px;text-align:center}
+.empty-state{padding:40px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;min-height:200px}
 .empty-icon{font-size:40px;color:#0F5132;opacity:.3;margin-bottom:12px}
 .empty-title{font-size:14px;font-weight:500;color:#212529;margin-bottom:6px}
 .empty-sub{font-size:12px;color:#6c757d}
@@ -314,7 +314,7 @@ body{background:#F8F9FA;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
            • Role selector: Renter / Landlord
            • 10-digit ET phone validation
            ════════════════════════════════════════════ -->
-      <div class="screen" id="screen-onboard" role="tabpanel">
+      <div class="screen" id="screen-onboard" role="tabpanel" style="display:none;flex-direction:column;min-height:100vh">
         <div style="background:#0F5132;padding:24px 16px 20px;text-align:center">
           <!-- // # PULL REAL LOGO IMAGE FILE HERE -->
           <div style="font-size:26px;font-weight:500;color:#fff;letter-spacing:-.5px">Bet<span style="color:#FFC107">Link</span></div>
